@@ -11,6 +11,7 @@
     <OutputPath>.</OutputPath>
     <Name>BoSLOO</Name>
     <RootNamespace>BoSLOO</RootNamespace>
+    <InterpreterId>MSBuild|BoSLOOenv|$(MSBuildProjectFullPath)</InterpreterId>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <DebugSymbols>true</DebugSymbols>
@@ -22,6 +23,17 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="OrbitSim.py" />
+  </ItemGroup>
+  <ItemGroup>
+    <Interpreter Include="env\BoSLOOenv\">
+      <Id>BoSLOOenv</Id>
+      <Version>3.8</Version>
+      <Description>BoSLOOenv (Python 3.8 (32-bit))</Description>
+      <InterpreterPath>Scripts\python.exe</InterpreterPath>
+      <WindowsInterpreterPath>Scripts\pythonw.exe</WindowsInterpreterPath>
+      <PathEnvironmentVariable>PYTHONPATH</PathEnvironmentVariable>
+      <Architecture>X86</Architecture>
+    </Interpreter>
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
   <!-- Uncomment the CoreCompile target to enable the Build command in
