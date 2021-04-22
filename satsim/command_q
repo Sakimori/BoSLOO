@@ -1,0 +1,14 @@
+0:status
+0:list
+0:uload:hello_ganymede.txt:dGhpcyBpcyBhIHRlc3QgY29tbWFuZCBmb3IgQm9TTE9P
+0:list
+0:dload:hello_earth.txt
+5:point:90:90
+5:status
+6:status
+7:status
+8:status
+30:optical_cooling:1
+60:optical_capture:10:optical_test.data
+70:optical_cooling:0
+70:tx_schedule:optical_text.data:test_station_name
