@@ -1,4 +1,6 @@
-import os, json, numpy, pygame
+import os, json, numpy, pygame, time
+from renderer import *
+from copy import deepcopy
 
 groundControlPath = "GroundControlFiles"
 configPath = os.path.join("ConfigFiles", "OrbitSim")
@@ -13,10 +15,8 @@ def config():
     if not os.path.exists(configFilename):
         #generate default
         config_dic = {
-                "g": 6674,
-                "gExp": -14, #G = g * 10^gExp
-                "earthMass": 5972,
-                "earthMassExp": 21, #Me = earthMass * 10^earthMassExp; in kg
+                "G": 6.674e-11,
+                "earthMass": 5.972e24, #in kg
                 "earthRadius": 6378000, #meters
                 "timeScale": 1 #higher number go faster wheeeeee
             }
@@ -27,61 +27,56 @@ def config():
         with open(configFilename) as file:
             return json.load(file)
 
-class Point:
-    """Numpy 3-vec"""
-    def __init__(self, x, y, z):
-        self.vector = numpy.array([x, y, z])
-
-    def magnitude(self):
-        return numpy.linalg.norm(self.vector)
-
-    def distanceFrom(self, otherPoint:"Point"):
-        return numpy.linalg.norm(self.vector - otherPoint.vector)
-
-Point.zero = Point(0, 0, 0)
-
-class Camera:
-    """Object which will be used to paint pixels on screen."""
-    def __init__(self, location:Point, target:Point = Point.zero, FOV = 75):
-        self.location = location
-        self.target = target
-        self.FOV = FOV
-
-    def isInside(self, planet:"Planet"):
-        """returns True if camera is inside the planet."""
-        return numpy.linalg.norm(self.location.magnitude) < planet.radius
-
 class OrbitingBody:
     """a zero-mass point object parented to a planet"""
     def __init__(self, location:Point, velocity:Point, name, displaySize, parentPlanet):
         self.location = location
         self.velocity = velocity
         self.name = name
-        self.displaySize = displaySize #the size of the object on camera, for visibility reasons
+        self.displaySize = displaySize #the size of the object on camera in pixels, for visibility reasons
         self.parentPlanet = parentPlanet
 
 class Planet:
     """A massive body at 0,0,0 and a given radius."""
-    def __init__(self, name, mass, radius, rotationPeriod):
+    def __init__(self, name, mass, radius, rotationPeriod, location:Point = deepcopy(Point.zero)):
         """Rotation period given in seconds."""
+        self.location = location
         self.name = name
         self.mass = mass
         self.radius = radius
-        self.rotationPercentage = 0
+        self.rotationPercentage = 0.00
         self.rotationPeriod = rotationPeriod
 
-Planet.Earth = Planet("Earth", (config()["earthMass"] * 10**config()["earthMassExp"]), config()["earthRadius"], 86400)
+    def rotate(self, timeDelta:"Seconds"):
+        self.rotationPercentage += timeDelta/self.rotationPeriod
+        if self.rotationPercentage >= 100.0:
+            self.rotationPercentage -= 100.0
+
+Planet.Earth = Planet("Earth", config()["earthMass"], config()["earthRadius"], 86400)
+
+def physicsUpdate(objects, deltaTime):
+    """updates the positions of all orbiting objects in [objects] with timestep deltaTime"""
+    for obj in objects:
+        if type(obj).__name__ == "OrbitingBody":
+            accel = Point.scalarMult(Point.subtract(obj.location, obj.parentPlanet.location).normalize(),-(config()["G"] * obj.parentPlanet.mass)/(Point.subtract(obj.location, obj.parentPlanet.location).magnitude() ** 2))
+            obj.velocity = Point.add(obj.velocity, Point.scalarMult(accel, deltaTime))
+            obj.location = Point.add(obj.location, Point.scalarMult(obj.velocity, deltaTime))
 
 if __name__=="__main__":
     pygame.init()
     pygame.display.set_caption("Spinny")
 
-    window = pygame.display.set_mode((400, 400))
+    window = pygame.display.set_mode((600, 600))
     resolutionDownscaling = 2
     pygame.display.flip()
 
+    frameTime = 1/30 #framerate
+
     running = True
     display = False
+    thisEarth = deepcopy(Planet.Earth)
+    sat = OrbitingBody(Point(config()["earthRadius"] * 1.1, 0, 0), Point(0,1000,-6500), "BoSLOO", 3, thisEarth)
+    renderObjects = [thisEarth, sat]
 
     while running:
         for event in pygame.event.get():
@@ -90,7 +85,21 @@ if __name__=="__main__":
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if not display:
                     display = True
-                    camera = Camera(Point(0, 0, 6378000*4))
+                    camera = Camera(window, Point(0, 0, 3 * config()["earthRadius"]), thisEarth, renderObjects)
+                    pygame.draw.circle(window, (255,255,255), pygame.mouse.get_pos(), 100)
+                    camera.renderFrame()
+                    pygame.display.flip()
+                else:
+                    display = False
+                    window.fill((0,0,0))
+                    pygame.display.flip()
+        if display:
+            deltaTime = frameTime * config()["timeScale"]
+            physicsUpdate(renderObjects, deltaTime)
+            camera.renderFrame()
+            pygame.display.flip()
+        time.sleep(frameTime)
+
     pygame.quit()
 
     print("Bye!")
