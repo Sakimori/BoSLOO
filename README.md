@@ -22,7 +22,7 @@ Funding -> The amount of cash available to use to upgrade a user's ground statio
 
 ## Constants:
 
-g: 6.674 * 10^-11
+G: 6.674 * 10^-11
 
 M🜨: 5.972 * 10^24 kg
 
