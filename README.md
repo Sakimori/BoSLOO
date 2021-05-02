@@ -2,7 +2,7 @@
 Browser-based MMO Satellite Toy/Idle Game
 
 
-### Glossary: **This is incomplete and will be added to as we go**
+## Glossary: **This is incomplete and will be added to as we go**
 
 
 
@@ -19,3 +19,13 @@ Ground station -> Any given researcher's UI in browser, and any upgrades they ma
 Missions -> Research tasks that will result in government funding + grants
 
 Funding -> The amount of cash available to use to upgrade a user's ground station/schedule sensor time.
+
+## Constants:
+
+g: 6.674 * 10^-11
+
+M🜨: 5.972 * 10^24 kg
+
+R🜨: 6378000 m
+
+Period of Rotation(🜨): 86400
