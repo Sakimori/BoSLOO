@@ -96,6 +96,15 @@ class Camera:
                 if intersectPoint is not None:
                     intersectPoint = Point.add(intersectPoint, Point(int(winWidth/2), int(winHeight/2), 0))
                     pygame.draw.circle(screenSurface, (255,255,150), (int(intersectPoint.vector[0]), int(intersectPoint.vector[1])), 15)
+            elif isinstance(obj, list):
+                for orbitline in obj:
+                    if orbitline.color != (0,0,0):
+                        lineToCamera = Line(orbitline.location, self.location)
+                        intersectPoint = lineToCamera.intersectWithPlane(screenPlane)
+                        if intersectPoint is not None:
+                            intersectPoint = Point.add(intersectPoint, Point(int(winWidth/2), int(winHeight/2), 0))
+                            pygame.draw.circle(screenSurface, orbitline.color, (int(intersectPoint.vector[0]), int(intersectPoint.vector[1])), 1)
+
 
         screenSurface = pygame.transform.flip(screenSurface, False, True)
         self.surface.blit(screenSurface, (0,0))

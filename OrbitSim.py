@@ -52,15 +52,37 @@ class Planet:
         if self.rotationPercentage >= 100.0:
             self.rotationPercentage -= 100.0
 
+class DisplayPoint:
+    """A single point of any color"""
+    def __init__(self, location, color):
+        self.location = location
+        self.color = color
+
+class DecayPoint(DisplayPoint):
+    """A display point that slowly fades to black"""
+    decayTick = 10
+    currentDecayTick = 0
+
+    def update(self):
+        self.currentDecayTick += 1
+        if self.currentDecayTick > self.decayTick:
+            self.currentDecayTick = 0
+            self.color = (max((self.color[0]-5, 0)), max((self.color[1]-5, 0)), max((self.color[2]-5, 0)))
+
 Planet.Earth = Planet("Earth", config()["earthMass"], config()["earthRadius"], 86400)
 
-def physicsUpdate(objects, deltaTime):
+def physicsUpdate(objects, orbitlines, deltaTime):
     """updates the positions of all orbiting objects in [objects] with timestep deltaTime"""
     for obj in objects:
         if type(obj).__name__ == "OrbitingBody":
+            orbitlines.append(DecayPoint(deepcopy(obj.location), (255,255,255)))
+            if len(orbitlines) > 500:
+                orbitlines.pop(0)
             accel = Point.scalarMult(Point.subtract(obj.location, obj.parentPlanet.location).normalize(),-(config()["G"] * obj.parentPlanet.mass)/(Point.subtract(obj.location, obj.parentPlanet.location).magnitude() ** 2))
             obj.velocity = Point.add(obj.velocity, Point.scalarMult(accel, deltaTime))
             obj.location = Point.add(obj.location, Point.scalarMult(obj.velocity, deltaTime))
+    for line in orbitlines:
+        line.update()
 
 if __name__=="__main__":
     pygame.init()
@@ -75,8 +97,9 @@ if __name__=="__main__":
     running = True
     display = False
     thisEarth = deepcopy(Planet.Earth)
-    sat = OrbitingBody(Point(config()["earthRadius"] * 1.1, 0, 0), Point(0,1000,-6500), "BoSLOO", 3, thisEarth)
-    renderObjects = [thisEarth, sat]
+    sat = OrbitingBody(Point(config()["earthRadius"] * 1.1, 0, 0), Point(0,6000,-6500), "BoSLOO", 3, thisEarth)
+    orbitlines = []
+    renderObjects = [thisEarth, sat, orbitlines]
 
     while running:
         for event in pygame.event.get():
@@ -95,7 +118,7 @@ if __name__=="__main__":
                     pygame.display.flip()
         if display:
             deltaTime = frameTime * config()["timeScale"]
-            physicsUpdate(renderObjects, deltaTime)
+            physicsUpdate(renderObjects, orbitlines, deltaTime)
             camera.renderFrame()
             pygame.display.flip()
         time.sleep(frameTime)
