@@ -12,8 +12,11 @@ class Point:
         self.vector = self.vector/self.magnitude()
         return self
 
-    def distanceFrom(self, otherPoint:"Point"):
+    def distanceFromPoint(self, otherPoint:"Point"):
         return numpy.linalg.norm(self.vector - otherPoint.vector)
+
+    def distanceFromLine(self, line:"Line"):
+        return numpy.linalg.norm(numpy.cross(line.p2.vector - line.p1.vector, self.vector - line.p1.vector)/numpy.linalg.norm(line.p2.vector - line.p1.vector))
 
     def add(p1, p2):
         sum = numpy.add(p1.vector, p2.vector)
@@ -108,6 +111,43 @@ class Camera:
 
         screenSurface = pygame.transform.flip(screenSurface, False, True)
         self.surface.blit(screenSurface, (0,0))
+
+    def renderImage(self, sat:"OrbitingBody"):
+        """generates a single image and saves it to disk"""
+        frozenSat = sat.location
+        winWidth, winHeight = self.surface.get_size()
+        winDistance = winWidth * numpy.cos(numpy.radians(self.hFOV)/2) / 2 #distance for a virtual screen to exist in-space to give the correct FOV
+        vecToCenter = Point.subtract(self.target.location, self.location)
+        vecToCenter.normalize()
+        screenPlane = Plane(Point.add(self.location, Point.scalarMult(vecToCenter, winDistance)), vecToCenter)
+        screenPlaneOrigin = Point.subtract(screenPlane.point, Point(int(winWidth/2), int(winHeight/2), 0))
+        screenSurface = pygame.Surface((winWidth, winHeight))
+        #pygame uses 0,0 as the top left corner
+
+        satDistance = -1
+        for column in range(0, winWidth):
+            for row in range(0, winHeight):
+                #get line in world going through this pixel
+                worldLine = Line(self.location, Point.add(screenPlaneOrigin, Point(column, row, 0)))
+                #compare distance from center of planet to radius of planet to determine intersection
+                if self.target.location.distanceFromLine(worldLine) < self.target.radius:
+                    screenSurface.set_at((column, row), (100,255,100))
+                
+                dist = frozenSat.distanceFromLine(worldLine)
+                if satDistance < 0 or dist < satDistance:
+                    satDistance = dist
+                    satPixel = (column, row)
+
+        if screenSurface.get_at(satPixel) == (0,0,0):
+            circleBorder = 0
+        else:
+            if self.location.distanceFromPoint(frozenSat) > self.location.distanceFromPoint(self.target.location):
+                circleBorder = 2
+            else:
+                circleBorder = 0
+        pygame.draw.circle(screenSurface, (230, 227, 64), satPixel, 4, width = circleBorder)
+        screenSurface = pygame.transform.flip(screenSurface, False, True)
+        pygame.image.save(screenSurface, "test.png")
         
 
         #for row in range(int(-winHeight/2), int(winHeight/2)):

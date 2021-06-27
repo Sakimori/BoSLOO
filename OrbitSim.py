@@ -1,4 +1,4 @@
-import os, json, numpy, pygame, time
+import os, json, numpy, pygame, time, threading
 from renderer import *
 from copy import deepcopy
 
@@ -97,9 +97,11 @@ if __name__=="__main__":
     running = True
     display = False
     thisEarth = deepcopy(Planet.Earth)
-    sat = OrbitingBody(Point(config()["earthRadius"] * 1.1, 0, 0), Point(0,6000,-6500), "BoSLOO", 3, thisEarth)
+    sat = OrbitingBody(Point(config()["earthRadius"] * 1.1, 0, 0), Point(0,1000,-8500), "BoSLOO", 3, thisEarth)
     orbitlines = []
     renderObjects = [thisEarth, sat, orbitlines]
+    imageThread = threading.Thread()
+    
 
     while running:
         for event in pygame.event.get():
@@ -108,16 +110,19 @@ if __name__=="__main__":
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if not display:
                     display = True
-                    camera = Camera(window, Point(0, 0, 3 * config()["earthRadius"]), thisEarth, renderObjects)
+                    camera = Camera(window, Point(0, 0, 8 * config()["earthRadius"]), thisEarth, renderObjects)
                     pygame.draw.circle(window, (255,255,255), pygame.mouse.get_pos(), 100)
                     camera.renderFrame()
                     pygame.display.flip()
                 else:
+                    if not imageThread.is_alive():
+                        imageThread = threading.Thread(target=camera.renderImage, args=(sat,))
+                        imageThread.start()
                     display = False
                     window.fill((0,0,0))
                     pygame.display.flip()
         if display:
-            deltaTime = frameTime * config()["timeScale"]
+            deltaTime = frameTime * config()["timeScale"]         
             physicsUpdate(renderObjects, orbitlines, deltaTime)
             camera.renderFrame()
             pygame.display.flip()
