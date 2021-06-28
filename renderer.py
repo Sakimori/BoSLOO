@@ -1,4 +1,4 @@
-import numpy, pygame
+import numpy, pygame, math
 
 class Point:
     """Numpy 3-vec"""
@@ -125,18 +125,38 @@ class Camera:
         #pygame uses 0,0 as the top left corner
 
         satDistance = -1
+
+        #DEBUG 
+        minlat = 1
+
         for column in range(0, winWidth):
             for row in range(0, winHeight):
                 #get line in world going through this pixel
                 worldLine = Line(self.location, Point.add(screenPlaneOrigin, Point(column, row, 0)))
-                #compare distance from center of planet to radius of planet to determine intersection
-                if self.target.location.distanceFromLine(worldLine) < self.target.radius:
-                    screenSurface.set_at((column, row), (100,255,100))
+                #compare distance from center of planet to radius of planet to determine intersection           
                 
                 dist = frozenSat.distanceFromLine(worldLine)
                 if satDistance < 0 or dist < satDistance:
                     satDistance = dist
                     satPixel = (column, row)
+
+                if self.target.location.distanceFromLine(worldLine) < self.target.radius:
+                    epsilon = 0.1
+                    yPrime = (row + screenPlaneOrigin.vector[1]) * (self.location.vector[2] / winDistance)
+                    xPrime = min([abs((column + screenPlaneOrigin.vector[0]) * (self.location.vector[2] / winDistance)), self.target.radius])
+                    try:
+                        lat = math.modf((math.acos(yPrime / self.target.radius) / (3.141592/12.0)))[0] * math.sin(math.acos(xPrime / self.target.radius))
+                    except:
+                        screenSurface.set_at((column, row), (20,20,20))
+                        continue
+
+                    if lat < minlat:
+                        minlat = lat
+
+                    if -epsilon < lat < epsilon:
+                        screenSurface.set_at((column, row), (200,200,200))
+                    else:
+                        screenSurface.set_at((column, row), (20,20,20))
 
         if screenSurface.get_at(satPixel) == (0,0,0):
             circleBorder = 0
