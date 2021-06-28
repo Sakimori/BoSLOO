@@ -1,9 +1,16 @@
 import numpy, pygame, math
+import pygame.freetype
 
 class Point:
     """Numpy 3-vec"""
     def __init__(self, x, y, z):
         self.vector = numpy.array([x, y, z])
+
+    def polar(self):
+        rho = math.sqrt(self.vector[0] ** 2 + self.vector[1] ** 2 + self.vector[2] ** 2)
+        theta = math.atan(self.vector[2]/self.vector[0])
+        phi = math.acos((self.vector[1])/(rho))
+        return [rho, theta, phi]
 
     def magnitude(self):
         return numpy.linalg.norm(self.vector)
@@ -79,6 +86,7 @@ class Camera:
 
     def renderFrame(self):
         """generates a frame and draws it to the surface. Does not update screen; use pygame.display.flip()"""
+        font = pygame.freetype.SysFont("Comic Sans MS", 14)
         winWidth, winHeight = self.surface.get_size()
         winDistance = winWidth * numpy.cos(numpy.radians(self.hFOV)/2) / 2 #distance for a virtual screen to exist in-space to give the correct FOV
         vecToCenter = Point.subtract(self.target.location, self.location)
@@ -88,12 +96,14 @@ class Camera:
         #pygame uses 0,0 as the top left corner
         for obj in self.objects:
             if type(obj).__name__ == "OrbitingBody":
+                sat = obj
                 lineToCamera = Line(obj.location, self.location)
                 intersectPoint = lineToCamera.intersectWithPlane(screenPlane)
                 if intersectPoint is not None:
                     intersectPoint = Point.add(intersectPoint, Point(int(winWidth/2), int(winHeight/2), 0))
                     pygame.draw.circle(screenSurface, (255,255,150), (int(intersectPoint.vector[0]), int(intersectPoint.vector[1])), obj.displaySize)
             elif type(obj).__name__ == "Planet":
+                target = obj
                 lineToCamera = Line(obj.location, self.location)
                 intersectPoint = lineToCamera.intersectWithPlane(screenPlane)
                 if intersectPoint is not None:
@@ -110,7 +120,16 @@ class Camera:
 
 
         screenSurface = pygame.transform.flip(screenSurface, False, True)
+
+        #generate text
+        rho, theta, phi = sat.location.polar()
+        theta = math.degrees(theta)
+        phi = math.degrees(phi)
+
+        #textSurface, rect = font.render(f"Speed: {round(sat.velocity.magnitude())} m/s \nAltitude: {round(rho - target.radius)} m", False, (255,255,255))
+        font.render_to(screenSurface, (0,0), f"Speed: {round(sat.velocity.magnitude())} m/s \nAltitude: {round(rho - target.radius)} m", (255,255,255))
         self.surface.blit(screenSurface, (0,0))
+        
 
     def renderImage(self, sat:"OrbitingBody"):
         """generates a single image and saves it to disk"""
@@ -126,8 +145,7 @@ class Camera:
 
         satDistance = -1
 
-        #DEBUG 
-        minlat = 1
+        curveCoeff = 1.1
 
         for column in range(0, winWidth):
             for row in range(0, winHeight):
@@ -142,22 +160,34 @@ class Camera:
 
                 if self.target.location.distanceFromLine(worldLine) < self.target.radius:
                     epsilon = 0.1
-                    yPrime = (row + screenPlaneOrigin.vector[1]) * (self.location.vector[2] / winDistance)
+                    yPrime = min([abs((row + screenPlaneOrigin.vector[1]) * (self.location.vector[2] / winDistance)), self.target.radius])
+                    yPrimeCurve = yPrime / (self.target.radius * curveCoeff)
                     xPrime = min([abs((column + screenPlaneOrigin.vector[0]) * (self.location.vector[2] / winDistance)), self.target.radius])
+                    xPrimeCurve = xPrime / (self.target.radius * curveCoeff)
+                    #treat yPrime like it's further from zero than it really is based on xPrime, and vice versa
+                    yPrime /= math.sin(math.acos(xPrimeCurve))
+                    xPrime /= math.sin(math.acos(yPrimeCurve))
+
                     try:
-                        lat = math.modf((math.acos(yPrime / self.target.radius) / (3.141592/12.0)))[0] * math.sin(math.acos(xPrime / self.target.radius))
+                        lat = math.modf((math.acos(yPrime / self.target.radius) / (3.141592/12.0)))[0] #pi/12 = 15 degrees
                     except:
                         screenSurface.set_at((column, row), (20,20,20))
                         continue
 
-                    if lat < minlat:
-                        minlat = lat
-
-                    if -epsilon < lat < epsilon:
-                        screenSurface.set_at((column, row), (200,200,200))
-                    else:
+                    try:
+                        long = math.modf((math.acos(xPrime / self.target.radius) / (3.141592/6.0)))[0] #pi/6 = 30 degrees
+                    except:
                         screenSurface.set_at((column, row), (20,20,20))
+                        continue
 
+                    if -epsilon < lat < epsilon or -epsilon < long < epsilon:
+                        screenSurface.set_at((column, row), (180,180,180))
+                    elif -epsilon < lat < epsilon and -epsilon < long < epsilon:
+                        screenSurface.set_at((column, row), (255,255,255))
+                    else:
+                        screenSurface.set_at((column, row), (50,50,50))
+
+        #check if satellite is behind or in front of planet (or unobscured)
         if screenSurface.get_at(satPixel) == (0,0,0):
             circleBorder = 0
         else:

@@ -88,7 +88,7 @@ if __name__=="__main__":
     pygame.init()
     pygame.display.set_caption("Spinny")
 
-    window = pygame.display.set_mode((600, 600))
+    window = pygame.display.set_mode((900, 900))
     resolutionDownscaling = 2
     pygame.display.flip()
 
@@ -97,7 +97,7 @@ if __name__=="__main__":
     running = True
     display = False
     thisEarth = deepcopy(Planet.Earth)
-    sat = OrbitingBody(Point(config()["earthRadius"] * 1.1, 0, 0), Point(2000,6000,-2500), "BoSLOO", 3, thisEarth)
+    sat = OrbitingBody(Point(config()["earthRadius"] * 1.5, 0, 0), Point(2000,6000,-2500), "BoSLOO", 3, thisEarth)
     orbitlines = []
     renderObjects = [thisEarth, sat, orbitlines]
     imageThread = threading.Thread()
@@ -110,7 +110,7 @@ if __name__=="__main__":
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if not display:
                     display = True
-                    camera = Camera(window, Point(0, 0, 5 * config()["earthRadius"]), thisEarth, renderObjects)
+                    camera = Camera(window, Point(0, 0, 4 * config()["earthRadius"]), thisEarth, renderObjects)
                     pygame.draw.circle(window, (255,255,255), pygame.mouse.get_pos(), 100)
                     camera.renderFrame()
                     pygame.display.flip()
