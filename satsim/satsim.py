@@ -28,7 +28,7 @@ class sat:
 
     def check_command_q(self):
         cur_batch = []
-        with open("test_q","r") as q:
+        with open("command_q","r") as q:
             com_q = q.read().splitlines()
             for com in com_q:
                 if int(com.split(":")[0]) == self.modules["heartbeat"].mod_get("MTE")[0]:
@@ -50,7 +50,7 @@ class sat:
                 elif com[1] == "SET" and len(com) == 5:
                     res = self.modules[com[2]].mod_set(com[3],com[4])
                 elif com[1] == "EXE" and len(com) == 5:
-                    res = self.modules[com[2]].mod_exe(com[3],com[4])
+                    res = self.modules[com[2]].mod_exe(com[3],com[3])
                 else:
                     res = (-1, "BAD COMMAND: " + c)
                 print(res)
@@ -60,6 +60,12 @@ class sat:
             if self.modules["heartbeat"].mod_get("kill")[0] == 1:
                 print("heading to bed")
                 return
+
+            with open("status", "r+") as statfile:
+                statfile.seek(0)
+                statfile.truncate()
+                statfile.write(str(MTE))
+
             sleep(1)
 
 
