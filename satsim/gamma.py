@@ -2,14 +2,12 @@ from module import module
 from random import randint
 class gamma_sensor(module):
 	def __init__(self):
-		super().__init__("gamma spectrometer")
-		self.fields["name"] = "gammaSensor"
+		super().__init__("gammaSensor")
 		self.fields["detections"] = 0
 		self.fields["detections_str"] = []
 		self.fields["threshold"] = 90
 		self.fields["flush"] = 0
 		self.writable = ["threshold","flush"]
-		print("id is:", self.id)
 
 	def mod_get(self, field="none"):
 		if field not in self.fields:
