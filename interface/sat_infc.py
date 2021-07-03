@@ -44,7 +44,7 @@ def shell(reader, writer):
                         writer.write("BAD OP COMMAND\r\n")
                         yield from writer.drain()
                 elif com[:3].upper() == "MTE" and len(com) == 3:
-                    with open("../satsim/command_q", "r") as statfile:
+                    with open("../satsim/status", "r") as statfile:
                         mte = statfile.read()
                     writer.write(mte + "\r\n")
                     yield from writer.drain()
