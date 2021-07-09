@@ -1,7 +1,7 @@
 import numpy as np
-from gamma import gamma_sensor
-from heartbeat import heartbeat_module
-from location import location_module
+from modules.gamma import gamma_sensor
+from modules.heartbeat import heartbeat_module
+from modules.location import location_module
 from time import sleep
 from astropy.coordinates import SkyCoord as sc
 from os import system
@@ -57,6 +57,7 @@ class sat:
             
             for m in self.modules:
                 self.modules[m].mod_update()
+                
             if self.modules["heartbeat"].mod_get("kill")[0] == 1:
                 print("heading to bed")
                 return

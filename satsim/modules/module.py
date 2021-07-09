@@ -1,4 +1,3 @@
-
 class module:
 	id_c = 0
 	def __init__(self, name):

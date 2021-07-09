@@ -1,4 +1,4 @@
-from module import module
+from .module import module
 class location_module(module):
 	id_c = 0
 	def __init__(self):

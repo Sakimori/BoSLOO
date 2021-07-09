@@ -1,4 +1,4 @@
-from module import module
+from .module import module
 from random import randint
 class gamma_sensor(module):
 	def __init__(self):

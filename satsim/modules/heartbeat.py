@@ -1,4 +1,4 @@
-from module import module
+from .module import module
 
 class heartbeat_module(module):
 	def __init__(self):
