@@ -2,6 +2,7 @@ import numpy as np
 from modules.gamma import gamma_sensor
 from modules.heartbeat import heartbeat_module
 from modules.location import location_module
+from modules.memory import memory_module
 from time import sleep
 from astropy.coordinates import SkyCoord as sc
 from os import system
@@ -22,7 +23,8 @@ class sat:
             "heartbeat"      : heartbeat_module(), 
             "location"       : location_module(),
             #"power"         : power_manager(), 
-            #"attitude"      : attitude_module(), 
+            #"attitude"      : attitude_module(),
+            "memory"         : memory_module(), 
             "gamma_sensor"   : gamma_sensor()
         }
 
@@ -49,8 +51,8 @@ class sat:
                     res = self.modules[com[2]].mod_get(com[3])
                 elif com[1] == "SET" and len(com) == 5:
                     res = self.modules[com[2]].mod_set(com[3],com[4])
-                elif com[1] == "EXE" and len(com) == 5:
-                    res = self.modules[com[2]].mod_exe(com[3],com[3])
+                elif com[1] == "EXE" and len(com) == 3:
+                    res = self.modules[com[2]].mod_exe()
                 else:
                     res = (-1, "BAD COMMAND: " + c)
                 print(res)
@@ -62,7 +64,7 @@ class sat:
                 print("heading to bed")
                 return
 
-            with open("status", "r+") as statfile:
+            with open("MTE", "r+") as statfile:
                 statfile.seek(0)
                 statfile.truncate()
                 statfile.write(str(MTE))
