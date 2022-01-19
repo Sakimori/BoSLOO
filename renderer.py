@@ -131,9 +131,10 @@ class Camera:
         self.surface.blit(screenSurface, (0,0))
         
 
-    def renderImage(self, sat:"OrbitingBody"):
+    def renderImage(self, sat:"OrbitingBody", planet:"Planet", points):
         """generates a single image and saves it to disk"""
         frozenSat = sat.location
+        rotValue = math.modf(planet.rotationPercentage * 12)[0] * 3.14159 / 6 #get percentage of 1/12 of a revolution
         winWidth, winHeight = self.surface.get_size()
         winDistance = winWidth * numpy.cos(numpy.radians(self.hFOV)/2) / 2 #distance for a virtual screen to exist in-space to give the correct FOV
         vecToCenter = Point.subtract(self.target.location, self.location)
@@ -175,7 +176,7 @@ class Camera:
                         continue
 
                     try:
-                        long = math.modf((math.acos(xPrime / self.target.radius) / (3.141592/6.0)))[0] #pi/6 = 30 degrees
+                        long = math.modf(((math.acos((xPrime) / self.target.radius)) / (3.141592/6.0)))[0] #pi/6 = 30 degrees
                     except:
                         screenSurface.set_at((column, row), (20,20,20))
                         continue

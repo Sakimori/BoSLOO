@@ -44,7 +44,7 @@ class Planet:
         self.name = name
         self.mass = mass
         self.radius = radius
-        self.rotationPercentage = 0.00
+        self.rotationPercentage = 0.04
         self.rotationPeriod = rotationPeriod
 
     def rotate(self, timeDelta:"Seconds"):
@@ -68,6 +68,10 @@ class DecayPoint(DisplayPoint):
         if self.currentDecayTick > self.decayTick:
             self.currentDecayTick = 0
             self.color = (max((self.color[0]-5, 0)), max((self.color[1]-5, 0)), max((self.color[2]-5, 0)))
+
+    def copy(self):
+        """returns a distinct copy of the point"""
+        return DecayPoint(self.location, self.color)
 
 Planet.Earth = Planet("Earth", config()["earthMass"], config()["earthRadius"], 86400)
 
@@ -116,7 +120,7 @@ if __name__=="__main__":
                     pygame.display.flip()
                 else:
                     if not imageThread.is_alive():
-                        imageThread = threading.Thread(target=camera.renderImage, args=(sat,))
+                        imageThread = threading.Thread(target=camera.renderImage, args=(sat, thisEarth, orbitlines))
                         imageThread.start()
                     display = False
                     window.fill((0,0,0))
