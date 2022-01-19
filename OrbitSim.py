@@ -44,7 +44,7 @@ class Planet:
         self.name = name
         self.mass = mass
         self.radius = radius
-        self.rotationPercentage = 0.04
+        self.rotationPercentage = 0.00
         self.rotationPeriod = rotationPeriod
 
     def rotate(self, timeDelta:"Seconds"):
@@ -85,6 +85,8 @@ def physicsUpdate(objects, orbitlines, deltaTime):
             accel = Point.scalarMult(Point.subtract(obj.location, obj.parentPlanet.location).normalize(),-(config()["G"] * obj.parentPlanet.mass)/(Point.subtract(obj.location, obj.parentPlanet.location).magnitude() ** 2))
             obj.velocity = Point.add(obj.velocity, Point.scalarMult(accel, deltaTime))
             obj.location = Point.add(obj.location, Point.scalarMult(obj.velocity, deltaTime))
+        elif type(obj).__name__ == "Planet":
+            obj.rotate(deltaTime)
     for line in orbitlines:
         line.update()
 
@@ -101,7 +103,7 @@ if __name__=="__main__":
     running = True
     display = False
     thisEarth = deepcopy(Planet.Earth)
-    sat = OrbitingBody(Point(config()["earthRadius"] * 1.5, 0, 0), Point(2000,6000,-2500), "BoSLOO", 3, thisEarth)
+    sat = OrbitingBody(Point(config()["earthRadius"] * 2, 0, 0), Point(0,0,0), "BoSLOO", 3, thisEarth)
     orbitlines = []
     renderObjects = [thisEarth, sat, orbitlines]
     imageThread = threading.Thread()
@@ -114,16 +116,15 @@ if __name__=="__main__":
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if not display:
                     display = True
-                    camera = Camera(window, Point(0, 0, 4 * config()["earthRadius"]), thisEarth, renderObjects)
-                    pygame.draw.circle(window, (255,255,255), pygame.mouse.get_pos(), 100)
+                    camera = Camera(window, Point(0, 0, 2 * config()["earthRadius"]), thisEarth, renderObjects)
                     camera.renderFrame()
                     pygame.display.flip()
                 else:
-                    if not imageThread.is_alive():
-                        imageThread = threading.Thread(target=camera.renderImage, args=(sat, thisEarth, orbitlines))
-                        imageThread.start()
-                    display = False
-                    window.fill((0,0,0))
+                    #if not imageThread.is_alive():
+                        #imageThread = threading.Thread(target=camera.renderImage, args=(sat, thisEarth, orbitlines))
+                        #imageThread.start()
+                    #display = False
+                    #window.fill((0,0,0))
                     pygame.display.flip()
         if display:
             deltaTime = frameTime * config()["timeScale"]         

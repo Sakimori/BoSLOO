@@ -1,5 +1,9 @@
-import numpy, pygame, math
+import numpy, pygame, math, os
 import pygame.freetype
+
+ASSET_DIR = "Assets"
+SPHERE_FOLDER_NAME = "Sphere"
+
 
 class Point:
     """Numpy 3-vec"""
@@ -70,15 +74,52 @@ class Plane:
         self.point = point
         self.normal = normal
 
+class PlanetSprite(pygame.sprite.Sprite):
+    def __init__(self, camera, parentPlanet:"Planet"):
+        pygame.sprite.Sprite.__init__(self)
+        #the rotation animation loops every 64th of a rotation, so determine and store the frame number.
+        self.frames = {}
+        for imgName in os.listdir(os.path.join(ASSET_DIR, SPHERE_FOLDER_NAME)):
+            if imgName.endswith(".png"): 
+                self.frames[imgName.strip(".png")] = pygame.image.load(os.path.join(ASSET_DIR, SPHERE_FOLDER_NAME, imgName)).convert_alpha()
+        self.parentPlanet = parentPlanet
+        self.frameNumber = str(round(math.modf(self.parentPlanet.rotationPercentage * 64)[0] * 49) + 1).zfill(4)
+        self.image = self.frames[self.frameNumber]
+        self.setSize(camera)
+                
+
+    def setSize(self, camera):
+        winWidth, winHeight = camera.surface.get_size()
+        distance = Point.subtract(camera.location, self.parentPlanet.location).magnitude()
+        widthHalf = self.parentPlanet.radius
+        angle = numpy.arctan(widthHalf/distance) #the angle from center to edge of the sphere, from the camera
+        sizeAsPercent = numpy.degrees(angle)/camera.hFOV
+        self.sideLength = int(winWidth*sizeAsPercent)
+        self.image = pygame.transform.scale(self.image, (self.sideLength, self.sideLength))
+        self.rect = self.image.get_rect()
+        self.rect.center = (winWidth/2, winHeight/2)
+
+
+    def update(self):
+        self.frameNumber = str(round(math.modf(self.parentPlanet.rotationPercentage * 64)[0] * 49) + 1).zfill(4)
+        self.image = pygame.image.load(os.path.join(ASSET_DIR, SPHERE_FOLDER_NAME, f"{self.frameNumber}.png")).convert_alpha()
+        if self.sideLength is not None:
+            self.image = pygame.transform.scale(self.image, (self.sideLength, self.sideLength))
+
+
+
 class Camera:
     """Object which will be used to paint pixels on screen."""
-    def __init__(self, surface:pygame.Surface, location:Point, target:"Planet", objects, hFOV = 55, vFOV = 55):
+    def __init__(self, surface:pygame.Surface, location:Point, target:"Planet", objects, hFOV = 60, vFOV = 60):
         self.surface = surface
         self.objects = objects
         self.location = location
         self.target = target
         self.hFOV = hFOV
         self.vFOV = vFOV
+        self.spriteGroup = pygame.sprite.Group()
+        self.spriteGroup.add(PlanetSprite(self, self.target))
+                
 
     def isInside(self, planet:"Planet"):
         """returns True if camera is inside the planet."""
@@ -93,6 +134,10 @@ class Camera:
         vecToCenter.normalize()
         screenPlane = Plane(Point.add(self.location, Point.scalarMult(vecToCenter, winDistance)), vecToCenter)
         screenSurface = pygame.Surface((winWidth, winHeight))
+        screenSurface.fill((10,10,10))
+
+        self.spriteGroup.update()
+        self.spriteGroup.draw(screenSurface)
         #pygame uses 0,0 as the top left corner
         for obj in self.objects:
             if type(obj).__name__ == "OrbitingBody":
@@ -102,13 +147,7 @@ class Camera:
                 if intersectPoint is not None:
                     intersectPoint = Point.add(intersectPoint, Point(int(winWidth/2), int(winHeight/2), 0))
                     pygame.draw.circle(screenSurface, (255,255,150), (int(intersectPoint.vector[0]), int(intersectPoint.vector[1])), obj.displaySize)
-            elif type(obj).__name__ == "Planet":
-                target = obj
-                lineToCamera = Line(obj.location, self.location)
-                intersectPoint = lineToCamera.intersectWithPlane(screenPlane)
-                if intersectPoint is not None:
-                    intersectPoint = Point.add(intersectPoint, Point(int(winWidth/2), int(winHeight/2), 0))
-                    pygame.draw.circle(screenSurface, (255,255,150), (int(intersectPoint.vector[0]), int(intersectPoint.vector[1])), 15)
+
             elif isinstance(obj, list):
                 for orbitline in obj:
                     if orbitline.color != (0,0,0):
@@ -125,16 +164,22 @@ class Camera:
         rho, theta, phi = sat.location.polar()
         theta = math.degrees(theta)
         phi = math.degrees(phi)
+        if rho < self.target.radius:
+            0 == 0
 
         #textSurface, rect = font.render(f"Speed: {round(sat.velocity.magnitude())} m/s \nAltitude: {round(rho - target.radius)} m", False, (255,255,255))
-        font.render_to(screenSurface, (0,0), f"Speed: {round(sat.velocity.magnitude())} m/s \nAltitude: {round(rho - target.radius)} m", (255,255,255))
+        font.render_to(screenSurface, (0,0), f"Speed: {round(sat.velocity.magnitude())} m/s", (255,255,255))
+        font.render_to(screenSurface, (0,20), f"Altitude: {round((rho - self.target.radius)/1000)} km", (255,255,255))
+        
+        self.surface.fill((0,0,0))
         self.surface.blit(screenSurface, (0,0))
+        
         
 
     def renderImage(self, sat:"OrbitingBody", planet:"Planet", points):
         """generates a single image and saves it to disk"""
         frozenSat = sat.location
-        rotValue = math.modf(planet.rotationPercentage * 12)[0] * 3.14159 / 6 #get percentage of 1/12 of a revolution
+        rotValue = math.modf(planet.rotationPercentage)[0] * 3.14159 / 6 #get percentage of 1/12 of a revolution
         winWidth, winHeight = self.surface.get_size()
         winDistance = winWidth * numpy.cos(numpy.radians(self.hFOV)/2) / 2 #distance for a virtual screen to exist in-space to give the correct FOV
         vecToCenter = Point.subtract(self.target.location, self.location)
