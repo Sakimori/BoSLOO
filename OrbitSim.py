@@ -60,14 +60,15 @@ class DisplayPoint:
 
 class DecayPoint(DisplayPoint):
     """A display point that slowly fades to black"""
-    decayTick = 10
+    decayTick = 1
     currentDecayTick = 0
+    color = (255,255,255,255)
 
     def update(self):
         self.currentDecayTick += 1
-        if self.currentDecayTick > self.decayTick:
+        if self.currentDecayTick >= self.decayTick:
             self.currentDecayTick = 0
-            self.color = (max((self.color[0]-5, 0)), max((self.color[1]-5, 0)), max((self.color[2]-5, 0)))
+            self.color = (self.color[0], self.color[1], self.color[2], (max((self.color[3]-5, 0))))
 
     def copy(self):
         """returns a distinct copy of the point"""
@@ -79,8 +80,8 @@ def physicsUpdate(objects, orbitlines, deltaTime):
     """updates the positions of all orbiting objects in [objects] with timestep deltaTime"""
     for obj in objects:
         if type(obj).__name__ == "OrbitingBody":
-            orbitlines.append(DecayPoint(deepcopy(obj.location), (255,255,255)))
-            if len(orbitlines) > 500:
+            orbitlines.append(DecayPoint(deepcopy(obj.location), (255,255,255,255)))
+            if len(orbitlines) > 100:
                 orbitlines.pop(0)
             accel = Point.scalarMult(Point.subtract(obj.location, obj.parentPlanet.location).normalize(),-(config()["G"] * obj.parentPlanet.mass)/(Point.subtract(obj.location, obj.parentPlanet.location).magnitude() ** 2))
             obj.velocity = Point.add(obj.velocity, Point.scalarMult(accel, deltaTime))
@@ -103,7 +104,7 @@ if __name__=="__main__":
     running = True
     display = False
     thisEarth = deepcopy(Planet.Earth)
-    sat = OrbitingBody(Point(0, config()["earthRadius"] * 2, 0), Point(0,0,0), "BoSLOO", 3, thisEarth)
+    sat = OrbitingBody(Point(1, config()["earthRadius"] + 2042000, 1), Point(-7400,0,-1200), "BoSLOO", 3, thisEarth)
     orbitlines = []
     renderObjects = [thisEarth, sat, orbitlines]
     imageThread = threading.Thread()

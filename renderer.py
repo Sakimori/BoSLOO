@@ -15,7 +15,7 @@ class Point:
             self.vector[0] = 0.1
         if self.vector[2] == 0:
             self.vector[2] = 0.1
-        rho = math.sqrt(self.vector[0] ** 2 + self.vector[1] ** 2 + self.vector[2] ** 2)
+        rho = math.sqrt(int(self.vector[0]) ** 2 + int(self.vector[1]) ** 2 + int(self.vector[2]) ** 2)
         theta = math.atan(self.vector[1]/self.vector[0])
         phi = math.acos(self.vector[2]/rho)
         return [rho, theta, phi]
@@ -94,11 +94,15 @@ class PlanetSprite(pygame.sprite.Sprite):
 
     def setSize(self, camera):
         winWidth, winHeight = camera.surface.get_size()
-        distance = Point.subtract(camera.location, self.parentPlanet.location).magnitude()
-        widthHalf = self.parentPlanet.radius
-        angle = numpy.degrees(numpy.arctan(widthHalf/distance)) #the angle from center to edge of the sphere, from the camera
-        sizeAsPercent = angle/camera.hFOV
-        self.sideLength = int(winWidth*sizeAsPercent*2)
+        #distance = Point.subtract(camera.location, self.parentPlanet.location).magnitude()
+        #radius = self.parentPlanet.radius
+        #self.sideLength = int((1/math.tan(numpy.radians(camera.hFOV)/2))*radius/math.sqrt(distance**2 - radius**2)*winWidth/2)
+
+        lineToCam = Line(Point.add(self.parentPlanet.location, Point(0, self.parentPlanet.radius,0)), camera.location)
+        intersectPoint = lineToCam.intersectWithPlane(camera.screenPlane)
+        radius = intersectPoint.vector[1]
+        self.sideLength = int(radius*2*600/530)
+
         self.image = pygame.transform.scale(self.image, (self.sideLength, self.sideLength))
         self.rect = self.image.get_rect()
         self.rect.center = (winWidth/2, winHeight/2)
@@ -114,13 +118,20 @@ class PlanetSprite(pygame.sprite.Sprite):
 
 class Camera:
     """Object which will be used to paint pixels on screen."""
-    def __init__(self, surface:pygame.Surface, location:Point, target:"Planet", objects, hFOV = 45):
+    def __init__(self, surface:pygame.Surface, location:Point, target:"Planet", objects, hFOV = 75):
         self.surface = surface
         self.objects = objects
         self.location = location
         self.target = target
         self.hFOV = hFOV
         self.spriteGroup = pygame.sprite.Group()
+
+        winWidth, winHeight = self.surface.get_size()
+        winDistance = winWidth / (2 * math.tan(numpy.radians(self.hFOV/2))) #distance for a virtual screen to exist in-space to give the correct FOV
+        vecToCenter = Point.subtract(self.target.location, self.location)
+        vecToCenter.normalize()
+        self.screenPlane = Plane(Point.add(self.location, Point.scalarMult(vecToCenter, winDistance)), vecToCenter)
+
         self.spriteGroup.add(PlanetSprite(self, self.target))
                 
 
@@ -132,21 +143,21 @@ class Camera:
         """generates a frame and draws it to the surface. Does not update screen; use pygame.display.flip()"""
         font = pygame.freetype.SysFont("Comic Sans MS", 14)
         winWidth, winHeight = self.surface.get_size()
-        winDistance = winWidth * numpy.cos(numpy.radians(self.hFOV)/2) / 2 #distance for a virtual screen to exist in-space to give the correct FOV
-        vecToCenter = Point.subtract(self.target.location, self.location)
-        vecToCenter.normalize()
-        screenPlane = Plane(Point.add(self.location, Point.scalarMult(vecToCenter, winDistance)), vecToCenter)
         screenSurface = pygame.Surface((winWidth, winHeight))
         screenSurface.fill((10,10,10))
 
         self.spriteGroup.update()
         self.spriteGroup.draw(screenSurface)
+
+        orbitlineSurface = pygame.Surface((winWidth, winHeight), pygame.SRCALPHA)
+        orbitlineSurface.fill((0,0,0,0))
         #pygame uses 0,0 as the top left corner
         for obj in self.objects:
             if type(obj).__name__ == "OrbitingBody":
                 sat = obj
                 lineToCamera = Line(obj.location, self.location)
-                intersectPoint = lineToCamera.intersectWithPlane(screenPlane)
+                intersectPoint = lineToCamera.intersectWithPlane(self.screenPlane)
+                intersectPoint.vector[2] = -intersectPoint.vector[2]
                 if intersectPoint is not None:
                     intersectPoint = Point.add(intersectPoint, Point(0, int(winWidth/2), int(winHeight/2))) #x is meaningless here
                     pygame.draw.circle(screenSurface, (255,255,150), (int(intersectPoint.vector[1]), int(intersectPoint.vector[2])), obj.displaySize)
@@ -155,10 +166,23 @@ class Camera:
                 for orbitline in obj:
                     if orbitline.color != (0,0,0):
                         lineToCamera = Line(orbitline.location, self.location)
-                        intersectPoint = lineToCamera.intersectWithPlane(screenPlane)
+                        intersectPoint = lineToCamera.intersectWithPlane(self.screenPlane)
+                        intersectPoint.vector[2] = -intersectPoint.vector[2]
                         if intersectPoint is not None:
                             intersectPoint = Point.add(intersectPoint, Point(0, int(winWidth/2), int(winHeight/2)))
-                            pygame.draw.circle(screenSurface, orbitline.color, (int(intersectPoint.vector[1]), int(intersectPoint.vector[2])), 1)
+                            if orbitline.color[3] != 0:
+                                pygame.draw.circle(orbitlineSurface, orbitline.color, (int(intersectPoint.vector[1]), int(intersectPoint.vector[2])), 1)
+
+        #DEBUG DOTS
+        #lineToCam = Line(Point.add(self.target.location, Point(0,self.target.radius,0)), self.location)
+        #intersectPoint = lineToCam.intersectWithPlane(self.screenPlane)
+        #intersectPoint = Point.add(intersectPoint, Point(0, int(winWidth/2), int(winHeight/2)))
+        #pygame.draw.circle(screenSurface, (255,150,150), (int(intersectPoint.vector[1]), int(intersectPoint.vector[2])), 5)
+
+        #newLineToCam = Line(Point.add(self.screenPlane.point, Point(0,750,0)), self.location)
+        #intersectPoint = newLineToCam.intersectWithPlane(self.screenPlane)
+        #intersectPoint = Point.add(intersectPoint, Point(0, int(winWidth/2), int(winHeight/2)))
+        #pygame.draw.circle(screenSurface, (150,255,150), (int(intersectPoint.vector[1]), int(intersectPoint.vector[2])), 5)
 
         #generate text
         rho, theta, phi = sat.location.polar()
@@ -170,8 +194,9 @@ class Camera:
         #textSurface, rect = font.render(f"Speed: {round(sat.velocity.magnitude())} m/s \nAltitude: {round(rho - target.radius)} m", False, (255,255,255))
         font.render_to(screenSurface, (0,0), f"Speed: {round(sat.velocity.magnitude()/1000,3)} km/s", (255,255,255))
         font.render_to(screenSurface, (0,20), f"Altitude: {round((rho - self.target.radius)/1000)} km", (255,255,255))
-        
+           
         self.surface.blit(screenSurface, (0,0))
+        self.surface.blit(orbitlineSurface, (0,0))
         
         
 
