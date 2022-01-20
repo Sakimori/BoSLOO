@@ -118,7 +118,7 @@ class PlanetSprite(pygame.sprite.Sprite):
 
 class Camera:
     """Object which will be used to paint pixels on screen."""
-    def __init__(self, surface:pygame.Surface, location:Point, target:"Planet", objects, hFOV = 75):
+    def __init__(self, surface:pygame.Surface, location:Point, target:"Planet", objects, hFOV = 60):
         self.surface = surface
         self.objects = objects
         self.location = location
@@ -143,14 +143,17 @@ class Camera:
         """generates a frame and draws it to the surface. Does not update screen; use pygame.display.flip()"""
         font = pygame.freetype.SysFont("Comic Sans MS", 14)
         winWidth, winHeight = self.surface.get_size()
-        screenSurface = pygame.Surface((winWidth, winHeight))
-        screenSurface.fill((10,10,10))
 
-        self.spriteGroup.update()
-        self.spriteGroup.draw(screenSurface)
+        frontSurface = pygame.Surface((winWidth, winHeight), pygame.SRCALPHA)
+        backSurface = pygame.Surface((winWidth, winHeight), pygame.SRCALPHA)
+        backgroundSurface = pygame.Surface((winWidth, winHeight))
 
-        orbitlineSurface = pygame.Surface((winWidth, winHeight), pygame.SRCALPHA)
-        orbitlineSurface.fill((0,0,0,0))
+        backgroundSurface.fill((15,15,15))
+        backSurface.fill((0,0,0,0))
+        frontSurface.fill((0,0,0,0))
+
+
+
         #pygame uses 0,0 as the top left corner
         for obj in self.objects:
             if type(obj).__name__ == "OrbitingBody":
@@ -160,7 +163,11 @@ class Camera:
                 intersectPoint.vector[2] = -intersectPoint.vector[2]
                 if intersectPoint is not None:
                     intersectPoint = Point.add(intersectPoint, Point(0, int(winWidth/2), int(winHeight/2))) #x is meaningless here
-                    pygame.draw.circle(screenSurface, (255,255,150), (int(intersectPoint.vector[1]), int(intersectPoint.vector[2])), obj.displaySize)
+                    if sat.location.vector[0] < 0:
+                        drawSurface = backSurface
+                    else:
+                        drawSurface = frontSurface
+                    pygame.draw.circle(drawSurface, (255,255,150,255), (int(intersectPoint.vector[1]), int(intersectPoint.vector[2])), obj.displaySize)
 
             elif isinstance(obj, list):
                 for orbitline in obj:
@@ -171,13 +178,17 @@ class Camera:
                         if intersectPoint is not None:
                             intersectPoint = Point.add(intersectPoint, Point(0, int(winWidth/2), int(winHeight/2)))
                             if orbitline.color[3] != 0:
-                                pygame.draw.circle(orbitlineSurface, orbitline.color, (int(intersectPoint.vector[1]), int(intersectPoint.vector[2])), 1)
+                                if orbitline.location.vector[0] < 0:
+                                    drawSurface = backSurface
+                                else:
+                                    drawSurface = frontSurface
+                                pygame.draw.circle(drawSurface, orbitline.color, (int(intersectPoint.vector[1]), int(intersectPoint.vector[2])), 1)
 
         #DEBUG DOTS
         #lineToCam = Line(Point.add(self.target.location, Point(0,self.target.radius,0)), self.location)
         #intersectPoint = lineToCam.intersectWithPlane(self.screenPlane)
         #intersectPoint = Point.add(intersectPoint, Point(0, int(winWidth/2), int(winHeight/2)))
-        #pygame.draw.circle(screenSurface, (255,150,150), (int(intersectPoint.vector[1]), int(intersectPoint.vector[2])), 5)
+        #pygame.draw.circle(frontSurface, (255,150,150,255), (int(intersectPoint.vector[1]), int(intersectPoint.vector[2])), 5)
 
         #newLineToCam = Line(Point.add(self.screenPlane.point, Point(0,750,0)), self.location)
         #intersectPoint = newLineToCam.intersectWithPlane(self.screenPlane)
@@ -192,11 +203,15 @@ class Camera:
             0 == 0
 
         #textSurface, rect = font.render(f"Speed: {round(sat.velocity.magnitude())} m/s \nAltitude: {round(rho - target.radius)} m", False, (255,255,255))
-        font.render_to(screenSurface, (0,0), f"Speed: {round(sat.velocity.magnitude()/1000,3)} km/s", (255,255,255))
-        font.render_to(screenSurface, (0,20), f"Altitude: {round((rho - self.target.radius)/1000)} km", (255,255,255))
+        font.render_to(backSurface, (0,0), f"Speed: {round(sat.velocity.magnitude()/1000,3)} km/s", (255,255,255))
+        font.render_to(backSurface, (0,20), f"Altitude: {round((rho - self.target.radius)/1000)} km", (255,255,255))
+
+        self.spriteGroup.update()
+        self.spriteGroup.draw(backSurface)
            
-        self.surface.blit(screenSurface, (0,0))
-        self.surface.blit(orbitlineSurface, (0,0))
+        self.surface.blit(backgroundSurface, (0,0))
+        self.surface.blit(backSurface, (0,0))
+        self.surface.blit(frontSurface, (0,0))
         
         
 

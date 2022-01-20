@@ -95,16 +95,16 @@ if __name__=="__main__":
     pygame.init()
     pygame.display.set_caption("Spinny")
 
-    window = pygame.display.set_mode((1500, 900))
+    window = pygame.display.set_mode((900, 900))
     resolutionDownscaling = 2
     pygame.display.flip()
 
-    frameTime = 1/30 #framerate
+    frameTime = 1/144 #framerate
 
     running = True
     display = False
     thisEarth = deepcopy(Planet.Earth)
-    sat = OrbitingBody(Point(1, config()["earthRadius"] + 2042000, 1), Point(-7400,0,-1200), "BoSLOO", 3, thisEarth)
+    sat = OrbitingBody(Point(0, config()["earthRadius"] + 2042000, config()["earthRadius"] + 3000000), Point(-4800,0,-1800), "BoSLOO", 5, thisEarth)
     orbitlines = []
     renderObjects = [thisEarth, sat, orbitlines]
     imageThread = threading.Thread()
