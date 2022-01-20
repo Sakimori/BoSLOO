@@ -139,7 +139,7 @@ class Camera:
         """returns True if camera is inside the planet."""
         return numpy.linalg.norm(self.location.magnitude) < planet.radius
 
-    def renderFrame(self):
+    def renderFrame(self, save=False):
         """generates a frame and draws it to the surface. Does not update screen; use pygame.display.flip()"""
         font = pygame.freetype.SysFont("Comic Sans MS", 14)
         winWidth, winHeight = self.surface.get_size()
@@ -212,6 +212,9 @@ class Camera:
         self.surface.blit(backgroundSurface, (0,0))
         self.surface.blit(backSurface, (0,0))
         self.surface.blit(frontSurface, (0,0))
+
+        if save:
+            pygame.image.save(self.surface, "test.png")
         
         
 

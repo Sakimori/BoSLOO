@@ -99,7 +99,8 @@ if __name__=="__main__":
     resolutionDownscaling = 2
     pygame.display.flip()
 
-    frameTime = 1/144 #framerate
+    FPS = 144 #max framerate
+    frameTime = 1/144
 
     running = True
     display = False
@@ -107,10 +108,21 @@ if __name__=="__main__":
     sat = OrbitingBody(Point(0, config()["earthRadius"] + 2042000, config()["earthRadius"] + 3000000), Point(-4800,0,-1800), "BoSLOO", 5, thisEarth)
     orbitlines = []
     renderObjects = [thisEarth, sat, orbitlines]
-    imageThread = threading.Thread()
+    clock = pygame.time.Clock()
+    save = False
     
+    clock.tick(FPS)
 
     while running:
+        clock.tick(FPS)
+        if display:
+            #deltaTime = frameTime * config()["timeScale"]    
+            deltaTime = (clock.get_time()/1000) * config()["timeScale"]      
+            physicsUpdate(renderObjects, orbitlines, deltaTime)
+            camera.renderFrame(save=save)
+            save=False
+            pygame.display.flip()
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
@@ -121,18 +133,9 @@ if __name__=="__main__":
                     camera.renderFrame()
                     pygame.display.flip()
                 else:
-                    #if not imageThread.is_alive():
-                        #imageThread = threading.Thread(target=camera.renderImage, args=(sat, thisEarth, orbitlines))
-                        #imageThread.start()
-                    #display = False
-                    #window.fill((0,0,0))
-                    pygame.display.flip()
-        if display:
-            deltaTime = frameTime * config()["timeScale"]         
-            physicsUpdate(renderObjects, orbitlines, deltaTime)
-            camera.renderFrame()
-            pygame.display.flip()
-        time.sleep(frameTime)
+                    save = True
+        
+        #time.sleep(frameTime)
 
     pygame.quit()
 
