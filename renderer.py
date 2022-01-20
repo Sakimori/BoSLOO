@@ -11,13 +11,19 @@ class Point:
         self.vector = numpy.array([x, y, z])
 
     def polar(self):
+        """Converts the vector rectangular coordinates to polar coordinates."""
         if self.vector[0] == 0:
             self.vector[0] = 0.1
         if self.vector[2] == 0:
             self.vector[2] = 0.1
         rho = math.sqrt(int(self.vector[0]) ** 2 + int(self.vector[1]) ** 2 + int(self.vector[2]) ** 2)
-        theta = math.atan(self.vector[1]/self.vector[0])
-        phi = math.acos(self.vector[2]/rho)
+        theta = math.atan(self.vector[1]/self.vector[0]) #this has a range of -pi/2 to pi/2 but we need 0 to 2pi so more work needed
+        phi = math.acos(self.vector[2]/rho) 
+        if self.vector[0] < 0: 
+            if self.vector[1] >= 0: #if x is positive, atan is fine. need to check if x is negative, first.
+                theta += math.pi 
+            else:
+                theta -= math.pi
         return [rho, theta, phi]
 
     def magnitude(self):
@@ -197,14 +203,16 @@ class Camera:
 
         #generate text
         rho, theta, phi = sat.location.polar()
-        theta = math.degrees(theta)
-        phi = math.degrees(phi)
         if rho < self.target.radius:
             0 == 0
 
-        #textSurface, rect = font.render(f"Speed: {round(sat.velocity.magnitude())} m/s \nAltitude: {round(rho - target.radius)} m", False, (255,255,255))
+        rawLat, rawLong = self.target.sphericalToLatLong(theta, phi)
+        latString = f"Latitude: {round(rawLat,4)}⁰ N" if rawLat >= 0 else f"Latitude: {-round(rawLat,4)}⁰ S"
+        longString = f"Longitude: {round(rawLong,4)}⁰ E" if rawLong >= 0 else f"Longitude: {-round(rawLong,4)}⁰ W"
         font.render_to(backSurface, (0,0), f"Speed: {round(sat.velocity.magnitude()/1000,3)} km/s", (255,255,255))
         font.render_to(backSurface, (0,20), f"Altitude: {round((rho - self.target.radius)/1000)} km", (255,255,255))
+        font.render_to(backSurface, (0,50), latString, (255,255,255))
+        font.render_to(backSurface, (0,70), longString, (255,255,255))
 
         self.spriteGroup.update()
         self.spriteGroup.draw(backSurface)

@@ -52,6 +52,17 @@ class Planet:
         if self.rotationPercentage >= 100.0:
             self.rotationPercentage -= 100.0
 
+    def sphericalToLatLong(self, theta, phi):
+        """Converts theta and phi spherical coordinates to latitude and longitude. -> lat, long"""
+        rotRadian = self.rotationPercentage * 2 * math.pi
+        lat = -math.degrees(phi - (math.pi/2)) #positive lat is north, negative is south
+        long = theta - rotRadian #positive long is east, negative is west
+        if long < -math.pi:
+            long += math.pi*2
+        elif long > math.pi:
+            long -= math.pi*2 
+        return (lat, math.degrees(long))
+
 class DisplayPoint:
     """A single point of any color"""
     def __init__(self, location, color):
