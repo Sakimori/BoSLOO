@@ -47,15 +47,15 @@ class Planet:
         self.rotationPercentage = 0.00
         self.rotationPeriod = rotationPeriod
 
-    def rotate(self, timeDelta:"Seconds"):
-        self.rotationPercentage += timeDelta/self.rotationPeriod
+    def rotate(self, timeDelta):
+        self.rotationPercentage += timeDelta*100/self.rotationPeriod
         if self.rotationPercentage >= 100.0:
             self.rotationPercentage -= 100.0
 
     def sphericalToLatLong(self, theta, phi):
         """Converts theta and phi spherical coordinates to latitude and longitude. -> lat, long"""
-        rotRadian = self.rotationPercentage * 2 * math.pi
-        lat = -math.degrees(phi - (math.pi/2)) #positive lat is north, negative is south
+        rotRadian = self.rotationPercentage/100 * 2 * math.pi
+        lat = math.degrees(phi - (math.pi/2)) #negative lat is north, positive is south
         long = theta - rotRadian #positive long is east, negative is west
         if long < -math.pi:
             long += math.pi*2
@@ -116,10 +116,12 @@ if __name__=="__main__":
     running = True
     display = False
     thisEarth = deepcopy(Planet.Earth)
-    sat = OrbitingBody(Point(0, config()["earthRadius"] + 2042000, config()["earthRadius"] + 3000000), Point(-4800,0,-1800), "BoSLOO", 5, thisEarth)
+    sat = OrbitingBody(Point(0, config()["earthRadius"], config()["earthRadius"] - 800000), Point(-8900,0,0), "BoSLOO", 5, thisEarth)
     orbitlines = []
     renderObjects = [thisEarth, sat, orbitlines]
     clock = pygame.time.Clock()
+    mapThread = threading.Thread()
+
     save = False
     
     clock.tick(FPS)
@@ -140,11 +142,14 @@ if __name__=="__main__":
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if not display:
                     display = True
-                    camera = Camera(window, Point(5 * config()["earthRadius"], 0, 0), thisEarth, renderObjects)
+                    camera = Camera(window, Point(10 * config()["earthRadius"], 0, 0), thisEarth, renderObjects)
                     camera.renderFrame()
                     pygame.display.flip()
                 else:
                     save = True
+                    if not mapThread.is_alive():
+                        mapThread = threading.Thread(target=camera.saveGroundTrack())
+                        mapThread.start()
         
         #time.sleep(frameTime)
 

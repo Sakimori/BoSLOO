@@ -3,6 +3,7 @@ import pygame.freetype
 
 ASSET_DIR = "Assets"
 SPHERE_FOLDER_NAME = "Sphere"
+MAPS_FOLDER_NAME = "Maps"
 
 
 class Point:
@@ -93,7 +94,7 @@ class PlanetSprite(pygame.sprite.Sprite):
             if imgName.endswith(".png"): 
                 self.frames[imgName.strip(".png")] = pygame.image.load(os.path.join(ASSET_DIR, SPHERE_FOLDER_NAME, imgName)).convert_alpha()
         self.parentPlanet = parentPlanet
-        self.frameNumber = str(round(math.modf(self.parentPlanet.rotationPercentage * 64)[0] * 49) + 1).zfill(4)
+        self.frameNumber = str(round(math.modf(self.parentPlanet.rotationPercentage/100 * 64)[0] * 49) + 1).zfill(4)
         self.image = self.frames[self.frameNumber]
         self.setSize(camera)
                 
@@ -115,7 +116,7 @@ class PlanetSprite(pygame.sprite.Sprite):
 
 
     def update(self):
-        self.frameNumber = str(round(math.modf(self.parentPlanet.rotationPercentage * 64)[0] * 49) + 1).zfill(4)
+        self.frameNumber = str(round(math.modf(self.parentPlanet.rotationPercentage/100 * 64)[0] * 49) + 1).zfill(4)
         self.image = pygame.image.load(os.path.join(ASSET_DIR, SPHERE_FOLDER_NAME, f"{self.frameNumber}.png")).convert_alpha()
         if self.sideLength is not None:
             self.image = pygame.transform.scale(self.image, (self.sideLength, self.sideLength))
@@ -123,7 +124,7 @@ class PlanetSprite(pygame.sprite.Sprite):
 
 
 class Camera:
-    """Object which will be used to paint pixels on screen."""
+    """Object in charge of rendering both the realtime 3D scene and a ground track map."""
     def __init__(self, surface:pygame.Surface, location:Point, target:"Planet", objects, hFOV = 60):
         self.surface = surface
         self.objects = objects
@@ -131,6 +132,12 @@ class Camera:
         self.target = target
         self.hFOV = hFOV
         self.spriteGroup = pygame.sprite.Group()
+        self.pastTrackPoints = []
+        self.trackSampleRate = 8
+        self.trackSampleCount = 0
+
+        self.mapSurface = pygame.image.load(os.path.join(ASSET_DIR, MAPS_FOLDER_NAME, "rect_color.png"))
+        self.mapWidth, self.mapHeight = self.mapSurface.get_size()
 
         winWidth, winHeight = self.surface.get_size()
         winDistance = winWidth / (2 * math.tan(numpy.radians(self.hFOV/2))) #distance for a virtual screen to exist in-space to give the correct FOV
@@ -207,7 +214,8 @@ class Camera:
             0 == 0
 
         rawLat, rawLong = self.target.sphericalToLatLong(theta, phi)
-        latString = f"Latitude: {round(rawLat,4)}⁰ N" if rawLat >= 0 else f"Latitude: {-round(rawLat,4)}⁰ S"
+        self.updateTrackList(rawLat, rawLong)
+        latString = f"Latitude: {round(rawLat,4)}⁰ S" if rawLat >= 0 else f"Latitude: {-round(rawLat,4)}⁰ N"
         longString = f"Longitude: {round(rawLong,4)}⁰ E" if rawLong >= 0 else f"Longitude: {-round(rawLong,4)}⁰ W"
         font.render_to(backSurface, (0,0), f"Speed: {round(sat.velocity.magnitude()/1000,3)} km/s", (255,255,255))
         font.render_to(backSurface, (0,20), f"Altitude: {round((rho - self.target.radius)/1000)} km", (255,255,255))
@@ -226,76 +234,38 @@ class Camera:
         
         
 
-    def renderImage(self, sat:"OrbitingBody", planet:"Planet", points):
-        """generates a single image and saves it to disk"""
-        frozenSat = sat.location
-        rotValue = math.modf(planet.rotationPercentage)[0] * 3.14159 / 6 #get percentage of 1/12 of a revolution
-        winWidth, winHeight = self.surface.get_size()
-        winDistance = winWidth * numpy.cos(numpy.radians(self.hFOV)/2) / 2 #distance for a virtual screen to exist in-space to give the correct FOV
-        vecToCenter = Point.subtract(self.target.location, self.location)
-        vecToCenter.normalize()
-        screenPlane = Plane(Point.add(self.location, Point.scalarMult(vecToCenter, winDistance)), vecToCenter)
-        screenPlaneOrigin = Point.subtract(screenPlane.point, Point(int(winWidth/2), int(winHeight/2), 0))
-        screenSurface = pygame.Surface((winWidth, winHeight))
-        #pygame uses 0,0 as the top left corner
+    def updateTrackList(self, lat, long):
+        """Updates the ground track map list of points."""
+        if self.trackSampleCount != self.trackSampleRate:
+            self.trackSampleCount += 1
+            return
+        if len(self.pastTrackPoints) > 20000:
+            self.pastTrackPoints.pop(0)
+        #latitude is from -90 to 90; longitude is from -180 to 180.
+        latPercent = (lat + 90)/180
+        longPercent = (long + 180)/360
+        lat = self.mapHeight * latPercent
+        long = self.mapWidth * longPercent
+        self.pastTrackPoints.append((long, lat))
+        self.trackSampleCount = 0
 
-        satDistance = -1
-
-        curveCoeff = 1.1
-
-        for column in range(0, winWidth):
-            for row in range(0, winHeight):
-                #get line in world going through this pixel
-                worldLine = Line(self.location, Point.add(screenPlaneOrigin, Point(column, row, 0)))
-                #compare distance from center of planet to radius of planet to determine intersection           
-                
-                dist = frozenSat.distanceFromLine(worldLine)
-                if satDistance < 0 or dist < satDistance:
-                    satDistance = dist
-                    satPixel = (column, row)
-
-                if self.target.location.distanceFromLine(worldLine) < self.target.radius:
-                    epsilon = 0.1
-                    yPrime = min([abs((row + screenPlaneOrigin.vector[1]) * (self.location.vector[2] / winDistance)), self.target.radius])
-                    yPrimeCurve = yPrime / (self.target.radius * curveCoeff)
-                    xPrime = min([abs((column + screenPlaneOrigin.vector[0]) * (self.location.vector[2] / winDistance)), self.target.radius])
-                    xPrimeCurve = xPrime / (self.target.radius * curveCoeff)
-                    #treat yPrime like it's further from zero than it really is based on xPrime, and vice versa
-                    yPrime /= math.sin(math.acos(xPrimeCurve))
-                    xPrime /= math.sin(math.acos(yPrimeCurve))
-
-                    try:
-                        lat = math.modf((math.acos(yPrime / self.target.radius) / (3.141592/12.0)))[0] #pi/12 = 15 degrees
-                    except:
-                        screenSurface.set_at((column, row), (20,20,20))
-                        continue
-
-                    try:
-                        long = math.modf(((math.acos((xPrime) / self.target.radius)) / (3.141592/6.0)))[0] #pi/6 = 30 degrees
-                    except:
-                        screenSurface.set_at((column, row), (20,20,20))
-                        continue
-
-                    if -epsilon < lat < epsilon or -epsilon < long < epsilon:
-                        screenSurface.set_at((column, row), (180,180,180))
-                    elif -epsilon < lat < epsilon and -epsilon < long < epsilon:
-                        screenSurface.set_at((column, row), (255,255,255))
-                    else:
-                        screenSurface.set_at((column, row), (50,50,50))
-
-        #check if satellite is behind or in front of planet (or unobscured)
-        if screenSurface.get_at(satPixel) == (0,0,0):
-            circleBorder = 0
-        else:
-            if self.location.distanceFromPoint(frozenSat) > self.location.distanceFromPoint(self.target.location):
-                circleBorder = 2
-            else:
-                circleBorder = 0
-        pygame.draw.circle(screenSurface, (230, 227, 64), satPixel, 4, width = circleBorder)
-        screenSurface = pygame.transform.flip(screenSurface, False, True)
-        pygame.image.save(screenSurface, "test.png")
-        
-
-        #for row in range(int(-winHeight/2), int(winHeight/2)):
-        #    for column in range(int(-winWidth/2), int(winWidth/2)):
-        #        line = Line(self.location, Point(self.location.x + column))
+    def saveGroundTrack(self):
+        mapSurface = pygame.Surface.copy(self.mapSurface)
+        sets = []
+        currStart = 0
+        for i in range(1,len(self.pastTrackPoints)):
+            if abs(self.pastTrackPoints[i][0] - self.pastTrackPoints[i-1][0]) > 400:
+                sets.append(self.pastTrackPoints[currStart:i])
+                currStart = i
+        sets.append(self.pastTrackPoints[currStart:])
+        colors = [(122,255,243), (211,122,255), (222,0,177)]
+        for i in range(0,len(sets)):
+            try:
+                pygame.draw.lines(mapSurface, colors[i%3], False, sets[i], width=5)
+                #pygame.draw.aalines(mapSurface, colors[i%3], False, [(long, lat+1) for long, lat in sets[i]])
+                #pygame.draw.aalines(mapSurface, colors[i%3], False, [(long+1, lat) for long, lat in sets[i]])
+                #pygame.draw.aalines(mapSurface, colors[i%3], False, [(long, lat-1) for long, lat in sets[i]])
+                #pygame.draw.aalines(mapSurface, colors[i%3], False, [(long-1, lat) for long, lat in sets[i]])
+            except:
+                pass
+        pygame.image.save(mapSurface, "testMap.png")
