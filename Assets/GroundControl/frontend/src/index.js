@@ -1,8 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import Typing from 'react-typing-animation';
+import { Wave } from 'react-animated-text';
 import './index.css';
-import logos from './BoSLOO logo.json';
 
 function Square(props) {
     return (
@@ -120,38 +119,7 @@ function calculateWinner(squares) {
     return null;
 }
 
-class Terminal extends React.Component {
-    constructor(props) {
-        super(props);
-        this.state = {
-            lines: [
-                { text: 'BoSLOO v0.1', printed: false },
-                { text: 'Today is Saturday.', printed: false },
-                { text: logos.logo, printed: false}
-            ]
-        }
-    }
-
-    render() {
-        var rawLines = [];
-        var typingLines = [];
-        for (let line of this.state.lines) {
-            line.printed ? rawLines = rawLines.concat([line.text]) : typingLines = typingLines.concat([line.text]);
-        }
-        const raw = rawLines.join('\n');
-        const type = typingLines.join('\n');
-        return (
-            <div className='Terminal'>
-                {raw}
-                <Typing speed={2 }>
-                    {type}
-                </Typing>
-            </div>
-        );
-    }
-}
-
 // ========================================
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
-root.render(<Terminal />);
+root.render(<Game />);

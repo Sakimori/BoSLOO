@@ -1,11 +1,10 @@
 @import url('https://fonts.googleapis.com/css?family=Major+Mono+Display');
 
 body {
-    font: 14px "Courier New", monospace;
-    background: #121212;
-    color: #02d300;
+    font: 14px "Major Mono Display", monospace;
+    color: #09e200;
     margin: 20px;
-    white-space: pre-wrap;
+    background: #141414;
 }
 
 ol, ul {
