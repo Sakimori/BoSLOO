@@ -1,5 +1,10 @@
-import numpy, pygame, math
+import numpy, pygame, math, os
 import pygame.freetype
+
+ASSET_DIR = "Assets"
+SPHERE_FOLDER_NAME = "Sphere"
+MAPS_FOLDER_NAME = "Maps"
+
 
 class Point:
     """Numpy 3-vec"""
@@ -7,9 +12,19 @@ class Point:
         self.vector = numpy.array([x, y, z])
 
     def polar(self):
-        rho = math.sqrt(self.vector[0] ** 2 + self.vector[1] ** 2 + self.vector[2] ** 2)
-        theta = math.atan(self.vector[2]/self.vector[0])
-        phi = math.acos((self.vector[1])/(rho))
+        """Converts the vector rectangular coordinates to polar coordinates."""
+        if self.vector[0] == 0:
+            self.vector[0] = 0.1
+        if self.vector[2] == 0:
+            self.vector[2] = 0.1
+        rho = math.sqrt(int(self.vector[0]) ** 2 + int(self.vector[1]) ** 2 + int(self.vector[2]) ** 2)
+        theta = math.atan(self.vector[1]/self.vector[0]) #this has a range of -pi/2 to pi/2 but we need 0 to 2pi so more work needed
+        phi = math.acos(self.vector[2]/rho) 
+        if self.vector[0] < 0: 
+            if self.vector[1] >= 0: #if x is positive, atan is fine. need to check if x is negative, first.
+                theta += math.pi 
+            else:
+                theta -= math.pi
         return [rho, theta, phi]
 
     def magnitude(self):
@@ -70,137 +85,187 @@ class Plane:
         self.point = point
         self.normal = normal
 
+class PlanetSprite(pygame.sprite.Sprite):
+    def __init__(self, camera, parentPlanet:"Planet"):
+        pygame.sprite.Sprite.__init__(self)
+        #the rotation animation loops every 64th of a rotation, so determine and store the frame number.
+        self.frames = {}
+        for imgName in os.listdir(os.path.join(ASSET_DIR, SPHERE_FOLDER_NAME)):
+            if imgName.endswith(".png"): 
+                self.frames[imgName.strip(".png")] = pygame.image.load(os.path.join(ASSET_DIR, SPHERE_FOLDER_NAME, imgName)).convert_alpha()
+        self.parentPlanet = parentPlanet
+        self.frameNumber = str(round(math.modf(self.parentPlanet.rotationPercentage/100 * 64)[0] * 49) + 1).zfill(4)
+        self.image = self.frames[self.frameNumber]
+        self.setSize(camera)
+                
+
+    def setSize(self, camera):
+        winWidth, winHeight = camera.surface.get_size()
+        #distance = Point.subtract(camera.location, self.parentPlanet.location).magnitude()
+        #radius = self.parentPlanet.radius
+        #self.sideLength = int((1/math.tan(numpy.radians(camera.hFOV)/2))*radius/math.sqrt(distance**2 - radius**2)*winWidth/2)
+
+        lineToCam = Line(Point.add(self.parentPlanet.location, Point(0, self.parentPlanet.radius,0)), camera.location)
+        intersectPoint = lineToCam.intersectWithPlane(camera.screenPlane)
+        radius = intersectPoint.vector[1]
+        self.sideLength = int(radius*2*600/530)
+
+        self.image = pygame.transform.scale(self.image, (self.sideLength, self.sideLength))
+        self.rect = self.image.get_rect()
+        self.rect.center = (winWidth/2, winHeight/2)
+
+
+    def update(self):
+        self.frameNumber = str(round(math.modf(self.parentPlanet.rotationPercentage/100 * 64)[0] * 49) + 1).zfill(4)
+        self.image = pygame.image.load(os.path.join(ASSET_DIR, SPHERE_FOLDER_NAME, f"{self.frameNumber}.png")).convert_alpha()
+        if self.sideLength is not None:
+            self.image = pygame.transform.scale(self.image, (self.sideLength, self.sideLength))
+
+
+
 class Camera:
-    """Object which will be used to paint pixels on screen."""
-    def __init__(self, surface:pygame.Surface, location:Point, target:"Planet", objects, hFOV = 55, vFOV = 55):
+    """Object in charge of rendering both the realtime 3D scene and a ground track map."""
+    def __init__(self, surface:pygame.Surface, location:Point, target:"Planet", objects, hFOV = 60):
         self.surface = surface
         self.objects = objects
         self.location = location
         self.target = target
         self.hFOV = hFOV
-        self.vFOV = vFOV
+        self.spriteGroup = pygame.sprite.Group()
+        self.pastTrackPoints = []
+        self.trackSampleRate = 8
+        self.trackSampleCount = 0
+
+        self.mapSurface = pygame.image.load(os.path.join(ASSET_DIR, MAPS_FOLDER_NAME, "rect_color.png"))
+        self.mapWidth, self.mapHeight = self.mapSurface.get_size()
+
+        winWidth, winHeight = self.surface.get_size()
+        winDistance = winWidth / (2 * math.tan(numpy.radians(self.hFOV/2))) #distance for a virtual screen to exist in-space to give the correct FOV
+        vecToCenter = Point.subtract(self.target.location, self.location)
+        vecToCenter.normalize()
+        self.screenPlane = Plane(Point.add(self.location, Point.scalarMult(vecToCenter, winDistance)), vecToCenter)
+
+        self.spriteGroup.add(PlanetSprite(self, self.target))
+                
 
     def isInside(self, planet:"Planet"):
         """returns True if camera is inside the planet."""
         return numpy.linalg.norm(self.location.magnitude) < planet.radius
 
-    def renderFrame(self):
+    def renderFrame(self, save=False):
         """generates a frame and draws it to the surface. Does not update screen; use pygame.display.flip()"""
         font = pygame.freetype.SysFont("Comic Sans MS", 14)
         winWidth, winHeight = self.surface.get_size()
-        winDistance = winWidth * numpy.cos(numpy.radians(self.hFOV)/2) / 2 #distance for a virtual screen to exist in-space to give the correct FOV
-        vecToCenter = Point.subtract(self.target.location, self.location)
-        vecToCenter.normalize()
-        screenPlane = Plane(Point.add(self.location, Point.scalarMult(vecToCenter, winDistance)), vecToCenter)
-        screenSurface = pygame.Surface((winWidth, winHeight))
+
+        frontSurface = pygame.Surface((winWidth, winHeight), pygame.SRCALPHA)
+        backSurface = pygame.Surface((winWidth, winHeight), pygame.SRCALPHA)
+        backgroundSurface = pygame.Surface((winWidth, winHeight))
+
+        backgroundSurface.fill((15,15,15))
+        backSurface.fill((0,0,0,0))
+        frontSurface.fill((0,0,0,0))
+
+
+
         #pygame uses 0,0 as the top left corner
         for obj in self.objects:
             if type(obj).__name__ == "OrbitingBody":
                 sat = obj
                 lineToCamera = Line(obj.location, self.location)
-                intersectPoint = lineToCamera.intersectWithPlane(screenPlane)
+                intersectPoint = lineToCamera.intersectWithPlane(self.screenPlane)
+                intersectPoint.vector[2] = -intersectPoint.vector[2]
                 if intersectPoint is not None:
-                    intersectPoint = Point.add(intersectPoint, Point(int(winWidth/2), int(winHeight/2), 0))
-                    pygame.draw.circle(screenSurface, (255,255,150), (int(intersectPoint.vector[0]), int(intersectPoint.vector[1])), obj.displaySize)
-            elif type(obj).__name__ == "Planet":
-                target = obj
-                lineToCamera = Line(obj.location, self.location)
-                intersectPoint = lineToCamera.intersectWithPlane(screenPlane)
-                if intersectPoint is not None:
-                    intersectPoint = Point.add(intersectPoint, Point(int(winWidth/2), int(winHeight/2), 0))
-                    pygame.draw.circle(screenSurface, (255,255,150), (int(intersectPoint.vector[0]), int(intersectPoint.vector[1])), 15)
+                    intersectPoint = Point.add(intersectPoint, Point(0, int(winWidth/2), int(winHeight/2))) #x is meaningless here
+                    if sat.location.vector[0] < 0:
+                        drawSurface = backSurface
+                    else:
+                        drawSurface = frontSurface
+                    pygame.draw.circle(drawSurface, (255,255,150,255), (int(intersectPoint.vector[1]), int(intersectPoint.vector[2])), obj.displaySize)
+
             elif isinstance(obj, list):
                 for orbitline in obj:
                     if orbitline.color != (0,0,0):
                         lineToCamera = Line(orbitline.location, self.location)
-                        intersectPoint = lineToCamera.intersectWithPlane(screenPlane)
+                        intersectPoint = lineToCamera.intersectWithPlane(self.screenPlane)
+                        intersectPoint.vector[2] = -intersectPoint.vector[2]
                         if intersectPoint is not None:
-                            intersectPoint = Point.add(intersectPoint, Point(int(winWidth/2), int(winHeight/2), 0))
-                            pygame.draw.circle(screenSurface, orbitline.color, (int(intersectPoint.vector[0]), int(intersectPoint.vector[1])), 1)
+                            intersectPoint = Point.add(intersectPoint, Point(0, int(winWidth/2), int(winHeight/2)))
+                            if orbitline.color[3] != 0:
+                                if orbitline.location.vector[0] < 0:
+                                    drawSurface = backSurface
+                                else:
+                                    drawSurface = frontSurface
+                                pygame.draw.circle(drawSurface, orbitline.color, (int(intersectPoint.vector[1]), int(intersectPoint.vector[2])), 1)
 
+        #DEBUG DOTS
+        #lineToCam = Line(Point.add(self.target.location, Point(0,self.target.radius,0)), self.location)
+        #intersectPoint = lineToCam.intersectWithPlane(self.screenPlane)
+        #intersectPoint = Point.add(intersectPoint, Point(0, int(winWidth/2), int(winHeight/2)))
+        #pygame.draw.circle(frontSurface, (255,150,150,255), (int(intersectPoint.vector[1]), int(intersectPoint.vector[2])), 5)
 
-        screenSurface = pygame.transform.flip(screenSurface, False, True)
+        #newLineToCam = Line(Point.add(self.screenPlane.point, Point(0,750,0)), self.location)
+        #intersectPoint = newLineToCam.intersectWithPlane(self.screenPlane)
+        #intersectPoint = Point.add(intersectPoint, Point(0, int(winWidth/2), int(winHeight/2)))
+        #pygame.draw.circle(screenSurface, (150,255,150), (int(intersectPoint.vector[1]), int(intersectPoint.vector[2])), 5)
 
         #generate text
         rho, theta, phi = sat.location.polar()
-        theta = math.degrees(theta)
-        phi = math.degrees(phi)
+        if rho < self.target.radius:
+            0 == 0
 
-        #textSurface, rect = font.render(f"Speed: {round(sat.velocity.magnitude())} m/s \nAltitude: {round(rho - target.radius)} m", False, (255,255,255))
-        font.render_to(screenSurface, (0,0), f"Speed: {round(sat.velocity.magnitude())} m/s \nAltitude: {round(rho - target.radius)} m", (255,255,255))
-        self.surface.blit(screenSurface, (0,0))
+        rawLat, rawLong = self.target.sphericalToLatLong(theta, phi)
+        self.updateTrackList(rawLat, rawLong)
+        latString = f"Latitude: {round(rawLat,4)}⁰ S" if rawLat >= 0 else f"Latitude: {-round(rawLat,4)}⁰ N"
+        longString = f"Longitude: {round(rawLong,4)}⁰ E" if rawLong >= 0 else f"Longitude: {-round(rawLong,4)}⁰ W"
+        font.render_to(backSurface, (0,0), f"Speed: {round(sat.velocity.magnitude()/1000,3)} km/s", (255,255,255))
+        font.render_to(backSurface, (0,20), f"Altitude: {round((rho - self.target.radius)/1000)} km", (255,255,255))
+        font.render_to(backSurface, (0,50), latString, (255,255,255))
+        font.render_to(backSurface, (0,70), longString, (255,255,255))
+
+        self.spriteGroup.update()
+        self.spriteGroup.draw(backSurface)
+           
+        self.surface.blit(backgroundSurface, (0,0))
+        self.surface.blit(backSurface, (0,0))
+        self.surface.blit(frontSurface, (0,0))
+
+        if save:
+            pygame.image.save(self.surface, "test.png")
+        
         
 
-    def renderImage(self, sat:"OrbitingBody", planet:"Planet", points):
-        """generates a single image and saves it to disk"""
-        frozenSat = sat.location
-        rotValue = math.modf(planet.rotationPercentage * 12)[0] * 3.14159 / 6 #get percentage of 1/12 of a revolution
-        winWidth, winHeight = self.surface.get_size()
-        winDistance = winWidth * numpy.cos(numpy.radians(self.hFOV)/2) / 2 #distance for a virtual screen to exist in-space to give the correct FOV
-        vecToCenter = Point.subtract(self.target.location, self.location)
-        vecToCenter.normalize()
-        screenPlane = Plane(Point.add(self.location, Point.scalarMult(vecToCenter, winDistance)), vecToCenter)
-        screenPlaneOrigin = Point.subtract(screenPlane.point, Point(int(winWidth/2), int(winHeight/2), 0))
-        screenSurface = pygame.Surface((winWidth, winHeight))
-        #pygame uses 0,0 as the top left corner
+    def updateTrackList(self, lat, long):
+        """Updates the ground track map list of points."""
+        if self.trackSampleCount != self.trackSampleRate:
+            self.trackSampleCount += 1
+            return
+        if len(self.pastTrackPoints) > 20000:
+            self.pastTrackPoints.pop(0)
+        #latitude is from -90 to 90; longitude is from -180 to 180.
+        latPercent = (lat + 90)/180
+        longPercent = (long + 180)/360
+        lat = self.mapHeight * latPercent
+        long = self.mapWidth * longPercent
+        self.pastTrackPoints.append((long, lat))
+        self.trackSampleCount = 0
 
-        satDistance = -1
-
-        curveCoeff = 1.1
-
-        for column in range(0, winWidth):
-            for row in range(0, winHeight):
-                #get line in world going through this pixel
-                worldLine = Line(self.location, Point.add(screenPlaneOrigin, Point(column, row, 0)))
-                #compare distance from center of planet to radius of planet to determine intersection           
-                
-                dist = frozenSat.distanceFromLine(worldLine)
-                if satDistance < 0 or dist < satDistance:
-                    satDistance = dist
-                    satPixel = (column, row)
-
-                if self.target.location.distanceFromLine(worldLine) < self.target.radius:
-                    epsilon = 0.1
-                    yPrime = min([abs((row + screenPlaneOrigin.vector[1]) * (self.location.vector[2] / winDistance)), self.target.radius])
-                    yPrimeCurve = yPrime / (self.target.radius * curveCoeff)
-                    xPrime = min([abs((column + screenPlaneOrigin.vector[0]) * (self.location.vector[2] / winDistance)), self.target.radius])
-                    xPrimeCurve = xPrime / (self.target.radius * curveCoeff)
-                    #treat yPrime like it's further from zero than it really is based on xPrime, and vice versa
-                    yPrime /= math.sin(math.acos(xPrimeCurve))
-                    xPrime /= math.sin(math.acos(yPrimeCurve))
-
-                    try:
-                        lat = math.modf((math.acos(yPrime / self.target.radius) / (3.141592/12.0)))[0] #pi/12 = 15 degrees
-                    except:
-                        screenSurface.set_at((column, row), (20,20,20))
-                        continue
-
-                    try:
-                        long = math.modf(((math.acos((xPrime) / self.target.radius)) / (3.141592/6.0)))[0] #pi/6 = 30 degrees
-                    except:
-                        screenSurface.set_at((column, row), (20,20,20))
-                        continue
-
-                    if -epsilon < lat < epsilon or -epsilon < long < epsilon:
-                        screenSurface.set_at((column, row), (180,180,180))
-                    elif -epsilon < lat < epsilon and -epsilon < long < epsilon:
-                        screenSurface.set_at((column, row), (255,255,255))
-                    else:
-                        screenSurface.set_at((column, row), (50,50,50))
-
-        #check if satellite is behind or in front of planet (or unobscured)
-        if screenSurface.get_at(satPixel) == (0,0,0):
-            circleBorder = 0
-        else:
-            if self.location.distanceFromPoint(frozenSat) > self.location.distanceFromPoint(self.target.location):
-                circleBorder = 2
-            else:
-                circleBorder = 0
-        pygame.draw.circle(screenSurface, (230, 227, 64), satPixel, 4, width = circleBorder)
-        screenSurface = pygame.transform.flip(screenSurface, False, True)
-        pygame.image.save(screenSurface, "test.png")
-        
-
-        #for row in range(int(-winHeight/2), int(winHeight/2)):
-        #    for column in range(int(-winWidth/2), int(winWidth/2)):
-        #        line = Line(self.location, Point(self.location.x + column))
+    def saveGroundTrack(self):
+        mapSurface = pygame.Surface.copy(self.mapSurface)
+        sets = []
+        currStart = 0
+        for i in range(1,len(self.pastTrackPoints)):
+            if abs(self.pastTrackPoints[i][0] - self.pastTrackPoints[i-1][0]) > 400:
+                sets.append(self.pastTrackPoints[currStart:i])
+                currStart = i
+        sets.append(self.pastTrackPoints[currStart:])
+        colors = [(122,255,243), (211,122,255), (222,0,177)]
+        for i in range(0,len(sets)):
+            try:
+                pygame.draw.lines(mapSurface, colors[i%3], False, sets[i], width=5)
+                #pygame.draw.aalines(mapSurface, colors[i%3], False, [(long, lat+1) for long, lat in sets[i]])
+                #pygame.draw.aalines(mapSurface, colors[i%3], False, [(long+1, lat) for long, lat in sets[i]])
+                #pygame.draw.aalines(mapSurface, colors[i%3], False, [(long, lat-1) for long, lat in sets[i]])
+                #pygame.draw.aalines(mapSurface, colors[i%3], False, [(long-1, lat) for long, lat in sets[i]])
+            except:
+                pass
+        pygame.image.save(mapSurface, "testMap.png")

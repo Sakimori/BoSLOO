@@ -44,13 +44,24 @@ class Planet:
         self.name = name
         self.mass = mass
         self.radius = radius
-        self.rotationPercentage = 0.04
+        self.rotationPercentage = 0.00
         self.rotationPeriod = rotationPeriod
 
-    def rotate(self, timeDelta:"Seconds"):
-        self.rotationPercentage += timeDelta/self.rotationPeriod
+    def rotate(self, timeDelta):
+        self.rotationPercentage += timeDelta*100/self.rotationPeriod
         if self.rotationPercentage >= 100.0:
             self.rotationPercentage -= 100.0
+
+    def sphericalToLatLong(self, theta, phi):
+        """Converts theta and phi spherical coordinates to latitude and longitude. -> lat, long"""
+        rotRadian = self.rotationPercentage/100 * 2 * math.pi
+        lat = math.degrees(phi - (math.pi/2)) #negative lat is north, positive is south
+        long = theta - rotRadian #positive long is east, negative is west
+        if long < -math.pi:
+            long += math.pi*2
+        elif long > math.pi:
+            long -= math.pi*2 
+        return (lat, math.degrees(long))
 
 class DisplayPoint:
     """A single point of any color"""
@@ -60,14 +71,15 @@ class DisplayPoint:
 
 class DecayPoint(DisplayPoint):
     """A display point that slowly fades to black"""
-    decayTick = 10
+    decayTick = 1
     currentDecayTick = 0
+    color = (255,255,255,255)
 
     def update(self):
         self.currentDecayTick += 1
-        if self.currentDecayTick > self.decayTick:
+        if self.currentDecayTick >= self.decayTick:
             self.currentDecayTick = 0
-            self.color = (max((self.color[0]-5, 0)), max((self.color[1]-5, 0)), max((self.color[2]-5, 0)))
+            self.color = (self.color[0], self.color[1], self.color[2], (max((self.color[3]-5, 0))))
 
     def copy(self):
         """returns a distinct copy of the point"""
@@ -79,12 +91,14 @@ def physicsUpdate(objects, orbitlines, deltaTime):
     """updates the positions of all orbiting objects in [objects] with timestep deltaTime"""
     for obj in objects:
         if type(obj).__name__ == "OrbitingBody":
-            orbitlines.append(DecayPoint(deepcopy(obj.location), (255,255,255)))
-            if len(orbitlines) > 500:
+            orbitlines.append(DecayPoint(deepcopy(obj.location), (255,255,255,255)))
+            if len(orbitlines) > 100:
                 orbitlines.pop(0)
             accel = Point.scalarMult(Point.subtract(obj.location, obj.parentPlanet.location).normalize(),-(config()["G"] * obj.parentPlanet.mass)/(Point.subtract(obj.location, obj.parentPlanet.location).magnitude() ** 2))
             obj.velocity = Point.add(obj.velocity, Point.scalarMult(accel, deltaTime))
             obj.location = Point.add(obj.location, Point.scalarMult(obj.velocity, deltaTime))
+        elif type(obj).__name__ == "Planet":
+            obj.rotate(deltaTime)
     for line in orbitlines:
         line.update()
 
@@ -96,41 +110,48 @@ if __name__=="__main__":
     resolutionDownscaling = 2
     pygame.display.flip()
 
-    frameTime = 1/30 #framerate
+    FPS = 144 #max framerate
+    frameTime = 1/144
 
     running = True
     display = False
     thisEarth = deepcopy(Planet.Earth)
-    sat = OrbitingBody(Point(config()["earthRadius"] * 1.5, 0, 0), Point(2000,6000,-2500), "BoSLOO", 3, thisEarth)
+    sat = OrbitingBody(Point(0, config()["earthRadius"], config()["earthRadius"] - 800000), Point(-8900,0,0), "BoSLOO", 5, thisEarth)
     orbitlines = []
     renderObjects = [thisEarth, sat, orbitlines]
-    imageThread = threading.Thread()
+    clock = pygame.time.Clock()
+    mapThread = threading.Thread()
+
+    save = False
     
+    clock.tick(FPS)
 
     while running:
+        clock.tick(FPS)
+        if display:
+            #deltaTime = frameTime * config()["timeScale"]    
+            deltaTime = (clock.get_time()/1000) * config()["timeScale"]      
+            physicsUpdate(renderObjects, orbitlines, deltaTime)
+            camera.renderFrame(save=save)
+            save=False
+            pygame.display.flip()
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if not display:
                     display = True
-                    camera = Camera(window, Point(0, 0, 4 * config()["earthRadius"]), thisEarth, renderObjects)
-                    pygame.draw.circle(window, (255,255,255), pygame.mouse.get_pos(), 100)
+                    camera = Camera(window, Point(10 * config()["earthRadius"], 0, 0), thisEarth, renderObjects)
                     camera.renderFrame()
                     pygame.display.flip()
                 else:
-                    if not imageThread.is_alive():
-                        imageThread = threading.Thread(target=camera.renderImage, args=(sat, thisEarth, orbitlines))
-                        imageThread.start()
-                    display = False
-                    window.fill((0,0,0))
-                    pygame.display.flip()
-        if display:
-            deltaTime = frameTime * config()["timeScale"]         
-            physicsUpdate(renderObjects, orbitlines, deltaTime)
-            camera.renderFrame()
-            pygame.display.flip()
-        time.sleep(frameTime)
+                    save = True
+                    if not mapThread.is_alive():
+                        mapThread = threading.Thread(target=camera.saveGroundTrack())
+                        mapThread.start()
+        
+        #time.sleep(frameTime)
 
     pygame.quit()
 

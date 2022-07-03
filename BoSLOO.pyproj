@@ -38,6 +38,62 @@
       <Architecture>X86</Architecture>
     </Interpreter>
   </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Assets\" />
+    <Folder Include="Assets\Sphere\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Assets\Sphere\0001.png" />
+    <Content Include="Assets\Sphere\0002.png" />
+    <Content Include="Assets\Sphere\0003.png" />
+    <Content Include="Assets\Sphere\0004.png" />
+    <Content Include="Assets\Sphere\0005.png" />
+    <Content Include="Assets\Sphere\0006.png" />
+    <Content Include="Assets\Sphere\0007.png" />
+    <Content Include="Assets\Sphere\0008.png" />
+    <Content Include="Assets\Sphere\0009.png" />
+    <Content Include="Assets\Sphere\0010.png" />
+    <Content Include="Assets\Sphere\0011.png" />
+    <Content Include="Assets\Sphere\0012.png" />
+    <Content Include="Assets\Sphere\0013.png" />
+    <Content Include="Assets\Sphere\0014.png" />
+    <Content Include="Assets\Sphere\0015.png" />
+    <Content Include="Assets\Sphere\0016.png" />
+    <Content Include="Assets\Sphere\0017.png" />
+    <Content Include="Assets\Sphere\0018.png" />
+    <Content Include="Assets\Sphere\0019.png" />
+    <Content Include="Assets\Sphere\0020.png" />
+    <Content Include="Assets\Sphere\0021.png" />
+    <Content Include="Assets\Sphere\0022.png" />
+    <Content Include="Assets\Sphere\0023.png" />
+    <Content Include="Assets\Sphere\0024.png" />
+    <Content Include="Assets\Sphere\0025.png" />
+    <Content Include="Assets\Sphere\0026.png" />
+    <Content Include="Assets\Sphere\0027.png" />
+    <Content Include="Assets\Sphere\0028.png" />
+    <Content Include="Assets\Sphere\0029.png" />
+    <Content Include="Assets\Sphere\0030.png" />
+    <Content Include="Assets\Sphere\0031.png" />
+    <Content Include="Assets\Sphere\0032.png" />
+    <Content Include="Assets\Sphere\0033.png" />
+    <Content Include="Assets\Sphere\0034.png" />
+    <Content Include="Assets\Sphere\0035.png" />
+    <Content Include="Assets\Sphere\0036.png" />
+    <Content Include="Assets\Sphere\0037.png" />
+    <Content Include="Assets\Sphere\0038.png" />
+    <Content Include="Assets\Sphere\0039.png" />
+    <Content Include="Assets\Sphere\0040.png" />
+    <Content Include="Assets\Sphere\0041.png" />
+    <Content Include="Assets\Sphere\0042.png" />
+    <Content Include="Assets\Sphere\0043.png" />
+    <Content Include="Assets\Sphere\0044.png" />
+    <Content Include="Assets\Sphere\0045.png" />
+    <Content Include="Assets\Sphere\0046.png" />
+    <Content Include="Assets\Sphere\0047.png" />
+    <Content Include="Assets\Sphere\0048.png" />
+    <Content Include="Assets\Sphere\0049.png" />
+    <Content Include="Assets\Sphere\0050.png" />
+  </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
   <!-- Uncomment the CoreCompile target to enable the Build command in
        Visual Studio and specify your pre- and post-build commands in
