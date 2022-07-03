@@ -9,7 +9,9 @@
     "babel-runtime": "^6.26.0",
     "react": "^18.2.0",
     "react-animated-text": "^0.1.4",
+    "react-clickable-div": "^1.0.0",
     "react-dom": "^18.2.0",
+    "react-keyboard-event-handler": "^1.5.4",
     "react-scripts": "5.0.1",
     "react-typing-animation": "^1.6.2",
     "web-vitals": "^2.1.4"

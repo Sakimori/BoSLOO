@@ -2,7 +2,7 @@
 
 body {
     font: 14px "Courier New", monospace;
-    background: #121212;
+    background: #0d0d0d;
     color: #02d300;
     margin: 20px;
     white-space: pre-wrap;
@@ -52,4 +52,18 @@ ol, ul {
 
 .game-info {
   margin-left: 20px;
+}
+
+.fail-text{
+    color: #d82222;
+}
+
+.blink-text {
+    animation: blinker 1s step-start infinite;
+}
+
+@keyframes blinker {
+    50% {
+        opacity: 0;
+    }
 }
