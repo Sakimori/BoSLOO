@@ -5,12 +5,13 @@ import ClickableDiv from 'react-clickable-div';
 import KeyboardEventHandler from 'react-keyboard-event-handler'
 import './index.css';
 import logos from './BoSLOO logo.json';
+import Terminal from './terminal.js'
 
-class Terminal extends React.Component {
+class Console extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
-            bodyObj: <SelfTest />,
+            bodyObj: <span><SelfTest /><KeyboardEventHandler handleKeys={['all']} onKeyEvent={(key, e) => { this.replaceBody(<Terminal />); this.setState({ init: true }) }} /></span>,
             init: false,
         }
     }
@@ -28,17 +29,10 @@ class Terminal extends React.Component {
         });
     }
 
-    handler() {
-        const init = this.state.init;
-        if (!init) { this.replaceBody('YIPPIE!'); this.setState({ init: true }); }
-    }
-
     render() {
         return (
-            <div className='terminal'>
+            <div className='console'>
                 {this.state.bodyObj}
-                <KeyboardEventHandler handleKeys={['all']}
-                    onKeyEvent={(key, e) => { if (!this.state.init) { this.replaceBody('YIPPIE!'); this.setState({ init: true }); } }} />
             </div>
         );
     }
@@ -73,4 +67,4 @@ class SelfTest extends React.Component {
 // =========================================
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
-root.render(<Terminal />);
+root.render(<Console />);

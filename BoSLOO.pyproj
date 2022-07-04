@@ -109,8 +109,10 @@
     <Content Include="GroundControl\frontend\public\manifest.json" />
     <Content Include="GroundControl\frontend\public\robots.txt" />
     <Content Include="GroundControl\frontend\README.md" />
+    <Content Include="GroundControl\frontend\src\commands.js" />
     <Content Include="GroundControl\frontend\src\index.css" />
     <Content Include="GroundControl\frontend\src\index.js" />
+    <Content Include="GroundControl\frontend\src\terminal.js" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
   <!-- Uncomment the CoreCompile target to enable the Build command in
