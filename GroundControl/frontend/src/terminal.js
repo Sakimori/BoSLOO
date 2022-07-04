@@ -1,19 +1,29 @@
-import Typing from 'react-typing-animation';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import * as KeyboardEventHandler from 'react-keyboard-event-handler';
-import command from './commands.js'
+import sentCommand from './commands.js'
 
 class Terminal extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
-            lines: ['Welcome!', "Well done."],
+            lines: [<tr className='terminal-line' key={-20}><th>-20</th><td>Welcome to BoSLOO Ground Control Console.</td></tr>, <tr className='terminal-line' key={-10}><th>-10</th><td> Time of connection: {new Date().toLocaleString('en-US')}</td></tr>],
             lastLine : '',
-            waitForUser: false
+            waitForUser: false,
+            lineNumber: 0,
+            controlHeld: false,
         };
         this.charIn = this.charIn.bind(this);
         this.handleKey = this.handleKey.bind(this);
+
+        const window = document.getRootNode();
+
+        window.addEventListener('paste', (e) => {
+            e.preventDefault();
+
+            let paste = (e.clipboardData || window.clipboardData).getData('text');
+            this.appendText(paste);
+        });
     }
 
     addLines(newLinesArray) {
@@ -29,6 +39,12 @@ class Terminal extends React.Component {
         });
     }
 
+    appendText(newText) {
+        this.setState({
+            lastLine: JSON.parse(JSON.stringify(this.state.lastLine)) + newText,
+        });
+    }
+
     deleteCharacter() {
         this.setState({
             lastLine: this.state.lastLine.slice(0,-1),
@@ -36,8 +52,10 @@ class Terminal extends React.Component {
     }
 
     finishLine() {
-        this.addLines([">" + this.state.lastLine, command(this.state.lastLine)]);
-        this.setState({ lastLine: '' });
+        let commandBody = sentCommand(this.state.lastLine);
+        this.addLines([<tr className='terminal-line' key={this.state.lineNumber}><th>{this.state.lineNumber}</th><td>{'>'}{this.state.lastLine}</td></tr>,
+            <tr className='terminal-line' key={this.state.lineNumber + 10}><th>{this.state.lineNumber + 10}</th><td>{commandBody}</td></tr>]);
+        this.setState({ lastLine: '', lineNumber: this.state.lineNumber+20 });
     }
 
     charIn(newCharObj) {
@@ -51,6 +69,8 @@ class Terminal extends React.Component {
             this.finishLine();
         } else if (e.keyCode === 8) { /*backspace*/
             this.deleteCharacter();
+        } else if (e.ctrlKey) {
+            return;
         } else if (e.keyCode === 32) {
             this.addCharacter(' ');
         } else if (e.keyCode >= 40) {
@@ -59,21 +79,19 @@ class Terminal extends React.Component {
     }
 
     displayLines() {
-        var stringOut = "";
-        for (let line of this.state.lines) {
-            stringOut += "\n";
-            stringOut += line;
-        }
-
-        return <span>{stringOut}</span>
+        return this.state.lines;
     }
 
     render() {
         return (
-            <div className='terminal'>
-                <KeyboardEventHandler handleKeys={['all']} onKeyEvent={this.handleKey} />
-                {this.displayLines()}<br />
-                {'>'}{this.state.lastLine}<span className='blink-text'>_</span>
+            <div className='terminal-window'>
+                <table className='terminal'>
+                    <tbody>
+                    <KeyboardEventHandler handleKeys={['all']} onKeyEvent={this.handleKey} />
+                    {this.displayLines()}
+                    <tr className='terminal-line'><th>{this.state.lineNumber}</th><td>{'>'}{this.state.lastLine}<span className='blink-text'>_</span></td></tr>
+                    </tbody>
+                </table>
             </div>
         )
     }

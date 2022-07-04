@@ -47,7 +47,7 @@ class SelfTest extends React.Component {
     }
 
     render() {
-        const final = <span>{logos.logo} < br /><br /><br /><Typing speed={5}>Press any key to continue...<br/>> <span className='blink-text'>_</span></Typing></span>;
+        const final = <span className='logo'>{logos.logo} < br /><br /><br /><Typing speed={5}>Press any key to continue...<br />{'>'} <span className='blink-text'>_</span></Typing></span>;
         return (
             <div className='power-on-self-test'>
                 <Typing speed={5} onFinishedTyping={() => this.setState({logodisplay: true})}>

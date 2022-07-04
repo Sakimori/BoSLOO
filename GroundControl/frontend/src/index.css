@@ -1,15 +1,55 @@
 @import url('https://fonts.googleapis.com/css?family=Major+Mono+Display');
 
 body {
-    font: 14px "Courier New", monospace;
-    background: #0d0d0d;
+    font: 18px "Courier New", monospace;
+    background-color: black;
+    background-image: radial-gradient(at bottom right, rgb(30 30 30), black);
+    height: 100vh;
+    overflow: hidden;
     color: #02d300;
+    text-shadow: 0 0 6px #73ff71;
     margin: 20px;
+}
+
+body::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 99vh;
+    background: repeating-linear-gradient( 0deg, rgb(0 0 0 / 0.15), rgb(0 0 0 / 0.15) 3px, transparent 2px, transparent 6px);
+    pointer-events: none;
+}
+
+::selection{
+    background: #793d71;
+    text-shadow: none;
+}
+
+.console {
+    padding-left: 6em;
+    padding-top: 10vh;
+    height: 80vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.logo {
     white-space: pre-wrap;
 }
 
-.fail-text{
+.fail-text {
     color: #d82222;
+    text-shadow: 0 0 6px #ff1111;
+}
+
+.terminal-window{
+    width: 40%;
+    height: 100%;
+    overflow: auto;
+    flex-grow: 1;
 }
 
 .active-line{
@@ -20,6 +60,21 @@ body {
 
 .blink-text {
     animation: blinker 1s step-start infinite;
+}
+
+.typed-line{
+    display: inline;
+}
+
+.terminal-line th{
+    text-align: right;
+    vertical-align: top;
+    padding-right: 0.2em;
+    width: 4em;
+}
+
+.terminal-line td{
+    text-align: left;
 }
 
 @keyframes blinker {
