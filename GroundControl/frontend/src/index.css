@@ -1,7 +1,7 @@
-@import url('https://fonts.googleapis.com/css?family=Major+Mono+Display');
+@import url('https://fonts.googleapis.com/css?family=VT323');
 
 body {
-    font: 18px "Courier New", monospace;
+    font: 18px "VT323", "Courier New", monospace;
     background-color: black;
     background-image: radial-gradient(at bottom right, rgb(30 30 30), black);
     height: 100vh;
@@ -75,15 +75,19 @@ body::after {
 }
 
 .power-on-self-test, .terminal-window {
-    border: double;
+    border:groove;
     margin-left: 5vw;
     margin-top: -5vh;
     padding-bottom: 1em;
+    padding-right: 2em;
     width: 60vw;
-    overflow: scroll;
+    overflow-y: auto;
+    overflow-x: hidden;
     flex-grow: 1;
     display: flex;
     flex-direction: column-reverse;
+    box-sizing: border-box;
+    box-shadow: 0 0 3px 1px rgb(49 255 0 / 0.70);
 }
 
 .terminal{
