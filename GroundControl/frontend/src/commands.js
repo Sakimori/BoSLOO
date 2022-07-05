@@ -23,7 +23,11 @@ class helpCommand extends Command{
 
     call(body) {
         if (body === "") {
-            return (this.helpString);
+            var commands = "";
+            for (let command of commandList) {
+                commands += command.keyword + " ";
+            }
+            return (commands);
         } else {
             for (let command of commandList) {
                 if (body === command.keyword || body === command.fullName) {

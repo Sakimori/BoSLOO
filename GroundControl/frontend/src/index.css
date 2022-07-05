@@ -8,7 +8,6 @@ body {
     overflow: hidden;
     color: #02d300;
     text-shadow: 0 0 6px #73ff71;
-    margin: 20px;
 }
 
 body::after {
@@ -27,10 +26,28 @@ body::after {
     text-shadow: none;
 }
 
+.power-on-container {
+    height: 90vh;
+    align-items:center;
+    justify-items:center;
+    text-align: center;
+}
+
+.power-on-box {
+    position:relative;
+    justify-self:center;   
+    margin-top: 20vh;
+}
+
+#start-text{
+    font-size: 30px;
+    border:double;
+    padding:2em 6em;
+}
+
 .console {
-    padding-left: 6em;
-    padding-top: 10vh;
-    height: 80vh;
+    padding-top: 15vh;
+    height: 70vh;
     overflow: hidden;
     display: flex;
     flex-direction: column;
@@ -46,10 +63,12 @@ body::after {
 }
 
 .terminal-window{
-    width: 40%;
+    width: 65%;
     height: 100%;
     overflow: auto;
     flex-grow: 1;
+    display: flex;
+    flex-direction: column-reverse;
 }
 
 .active-line{
