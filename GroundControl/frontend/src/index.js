@@ -69,9 +69,10 @@ class SelfTest extends React.Component {
     }
 
     render() {
-        const final = <span className='logo'>{logos.logo} < br /><br /><br /><Typing speed={5}>Press any key to continue...<br />{'>'} <span className='blink-text'>_</span></Typing></span>;
+        const final = <span className='logo'>{logos.logo} < br /><br /><br /><Typing speed={5}>Press any key to continue...<br /><span>{'>'} <span className='blink-text'>_</span></span></Typing></span>;
         return (
-            <div className='power-on-self-test'>              
+            <div className='power-on-self-test'>
+                {this.state.logodisplay ? final : null}
                 <Typing speed={30} onFinishedTyping={() => this.setState({ logodisplay: true })}>
                 BoSLOO ACPI BIOS v0.1<br />
                 Sakimori Ind. 2022<br />
@@ -80,7 +81,6 @@ class SelfTest extends React.Component {
                 Initializing GPU...................................<Typing.Speed ms={1000} />...<Typing.Speed ms={5} /> <span className='fail-text'>FAIL!</span><br />
                 <br />             
                 </Typing>
-                {this.state.logodisplay ? final : null}
             </div>
         )
     }

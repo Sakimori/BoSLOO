@@ -17,7 +17,7 @@ body::after {
     left: 0;
     width: 100vw;
     height: 99vh;
-    background: repeating-linear-gradient( 0deg, rgb(0 0 0 / 0.15), rgb(0 0 0 / 0.15) 3px, transparent 2px, transparent 6px);
+    background: repeating-linear-gradient( 0deg, rgb(0 0 0 / 0.20), rgb(0 0 0 / 0.15) 3px, transparent 2px, transparent 6px);
     pointer-events: none;
 }
 
@@ -65,18 +65,25 @@ body::after {
 }
 
 .power-on-self-test{
-    margin-left: 5vw;
+    
+    padding-left: 4em;
 }
 
 .terminal-window {
+    
+     
+}
+
+.power-on-self-test, .terminal-window {
+    border: double;
+    margin-left: 5vw;
+    margin-top: -5vh;
+    padding-bottom: 1em;
     width: 60vw;
     overflow: scroll;
     flex-grow: 1;
     display: flex;
     flex-direction: column-reverse;
-    border: double;
-    margin-left: 5vw;
-    margin-top: -5vh;
 }
 
 .terminal{
