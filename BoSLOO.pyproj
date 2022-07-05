@@ -11,7 +11,7 @@
     <OutputPath>.</OutputPath>
     <Name>BoSLOO</Name>
     <RootNamespace>BoSLOO</RootNamespace>
-    <InterpreterId>MSBuild|BoSLOOenv|$(MSBuildProjectFullPath)</InterpreterId>
+    <InterpreterId>MSBuild|bosloo_env|$(MSBuildProjectFullPath)</InterpreterId>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <DebugSymbols>true</DebugSymbols>
@@ -28,6 +28,15 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
+    <Interpreter Include="bosloo_env\">
+      <Id>bosloo_env</Id>
+      <Version>3.10</Version>
+      <Description>bosloo_env (Python 3.10 (64-bit))</Description>
+      <InterpreterPath>Scripts\python.exe</InterpreterPath>
+      <WindowsInterpreterPath>Scripts\pythonw.exe</WindowsInterpreterPath>
+      <PathEnvironmentVariable>PYTHONPATH</PathEnvironmentVariable>
+      <Architecture>X64</Architecture>
+    </Interpreter>
     <Interpreter Include="env\BoSLOOenv\">
       <Id>BoSLOOenv</Id>
       <Version>3.8</Version>
@@ -41,6 +50,14 @@
   <ItemGroup>
     <Folder Include="Assets\" />
     <Folder Include="Assets\Sphere\" />
+    <Folder Include="GroundControl\" />
+    <Folder Include="GroundControl\Assets\" />
+    <Folder Include="GroundControl\frontend\" />
+    <Folder Include="GroundControl\frontend\public\" />
+    <Folder Include="GroundControl\frontend\public\Assets\" />
+    <Folder Include="GroundControl\frontend\public\Assets\image\" />
+    <Folder Include="GroundControl\frontend\public\Assets\sound\" />
+    <Folder Include="GroundControl\frontend\src\" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Assets\Sphere\0001.png" />
@@ -93,6 +110,26 @@
     <Content Include="Assets\Sphere\0048.png" />
     <Content Include="Assets\Sphere\0049.png" />
     <Content Include="Assets\Sphere\0050.png" />
+    <Content Include="GroundControl\frontend\public\Assets\image\BoSLOO logo.txt" />
+    <Content Include="GroundControl\frontend\public\Assets\image\testMap.png" />
+    <Content Include="GroundControl\frontend\public\Assets\sound\apricot-rustle-boot.wav" />
+    <Content Include="GroundControl\frontend\public\Assets\sound\disc-seek-test.mp3" />
+    <Content Include="GroundControl\frontend\src\BoSLOO logo.json" />
+    <Content Include="GroundControl\frontend\.gitignore" />
+    <Content Include="GroundControl\frontend\package-lock.json" />
+    <Content Include="GroundControl\frontend\package.json" />
+    <Content Include="GroundControl\frontend\public\favicon.ico" />
+    <Content Include="GroundControl\frontend\public\index.html" />
+    <Content Include="GroundControl\frontend\public\logo192.png" />
+    <Content Include="GroundControl\frontend\public\logo512.png" />
+    <Content Include="GroundControl\frontend\public\manifest.json" />
+    <Content Include="GroundControl\frontend\public\robots.txt" />
+    <Content Include="GroundControl\frontend\README.md" />
+    <Content Include="GroundControl\frontend\src\commands.js" />
+    <Content Include="GroundControl\frontend\src\index.css" />
+    <Content Include="GroundControl\frontend\src\index.js" />
+    <Content Include="GroundControl\frontend\src\statusbar.js" />
+    <Content Include="GroundControl\frontend\src\terminal.js" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
   <!-- Uncomment the CoreCompile target to enable the Build command in
