@@ -8,7 +8,7 @@ import logos from './BoSLOO logo.json';
 import Terminal from './terminal.js';
 import StatusBar from './statusbar.js';
 
-const nominal = <div><Terminal /><StatusBar /></div>;
+const nominal = <Terminal />;
 
 class Console extends React.Component {
     constructor(props) {
@@ -54,6 +54,7 @@ class Console extends React.Component {
             <div className='console'>
                 <KeyboardEventHandler handleKeys={['all']} onKeyEvent={this.swapper} />
                 {this.state.bodyObj}
+                {this.state.init >= 2 ? <StatusBar/> : null}
             </div>
         );
     }

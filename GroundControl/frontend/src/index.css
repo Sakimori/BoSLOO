@@ -34,15 +34,17 @@ body::after {
 }
 
 .power-on-box {
-    position:relative;
-    justify-self:center;   
+    position: relative;
+    justify-self: center;
     margin-top: 20vh;
+    
 }
 
-#start-text{
+#start-text {
     font-size: 30px;
-    border:double;
-    padding:2em 6em;
+    border: ridge;
+    padding: 2em 6em;
+    box-shadow: 0 0 3px 1px rgb(49 255 0 / 0.70);
 }
 
 .console {
@@ -62,13 +64,23 @@ body::after {
     text-shadow: 0 0 6px #ff1111;
 }
 
-.terminal-window{
-    width: 65%;
-    height: 100%;
-    overflow: auto;
+.power-on-self-test{
+    margin-left: 5vw;
+}
+
+.terminal-window {
+    width: 60vw;
+    overflow: scroll;
     flex-grow: 1;
     display: flex;
     flex-direction: column-reverse;
+    border: double;
+    margin-left: 5vw;
+    margin-top: -5vh;
+}
+
+.terminal{
+    
 }
 
 .active-line{
