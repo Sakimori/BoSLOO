@@ -1,11 +1,16 @@
-import os, json, numpy, pygame, time, threading
+import os, json, numpy, pygame, time, threading, jsonpickle
 from renderer import *
 from copy import deepcopy
 
-groundControlPath = "GroundControlFiles"
+groundControlPath = "GroundControl"
+stateFilePath = os.path.join("SatState.json")
+
 configPath = os.path.join("ConfigFiles", "OrbitSim")
 configFilename = os.path.join(configPath, "Universe.cfg")
+satSavePath = os.path.join(configPath, "Orbit.cfg")
 mapFilename = os.path.join(configPath, "Map.png")
+
+STATE_EVENT = pygame.event.custom_type()
 
 def config():
     """Returns the config dictionary. Generates with default values if no config dictionary exists."""
@@ -18,7 +23,8 @@ def config():
                 "G": 6.674e-11,
                 "earthMass": 5.972e24, #in kg
                 "earthRadius": 6378000, #meters
-                "timeScale": 1 #higher number go faster wheeeeee
+                "timeScale": 1, #higher number go faster wheeeeee
+                "updateTick": 300 #seconds to wait between save to file
             }
         with open(configFilename, "w") as file:
             json.dump(config_dic, file, indent = 4)
@@ -27,14 +33,67 @@ def config():
         with open(configFilename) as file:
             return json.load(file)
 
+
+
 class OrbitingBody:
     """a zero-mass point object parented to a planet"""
     def __init__(self, location:Point, velocity:Point, name, displaySize, parentPlanet):
         self.location = location
+        self.resetLocation = location.copy()
         self.velocity = velocity
+        self.resetVelocity = velocity.copy()
         self.name = name
         self.displaySize = displaySize #the size of the object on camera in pixels, for visibility reasons
         self.parentPlanet = parentPlanet
+        self.lastDelta = 0
+        self.lastSecondDelta = 0
+        self.keepFreeze = 3
+
+    def stationKeep(self):
+        currDelta = Point.subtract(self.resetLocation, self.location).magnitude()
+        currSecondDelta = currDelta - self.lastDelta
+        if (currSecondDelta > 0) and (self.lastSecondDelta <= 0) and self.keepFreeze <= 0:
+            self.location = self.resetLocation.copy()
+            self.velocity = self.resetVelocity.copy()
+            self.keepFreeze = 3
+        elif self.keepFreeze > 0:
+            self.keepFreeze -= 1
+        self.lastDelta = currDelta
+        self.lastSecondDelta = currSecondDelta
+
+    def latLongAlt(self):
+        rho, theta, phi = self.location.polar()
+        rawLat, rawLong = self.parentPlanet.sphericalToLatLong(theta, phi) #negative lat is north, positive lat is south, positive long is east, negative long is west
+        return (rho - self.parentPlanet.radius), rawLat, rawLong
+
+    def writeStateReadable(self):
+        alt, lat, long = self.latLongAlt()
+        stateDic = {
+                "notes": "lat: pos S, neg N; long: pos E, neg W",
+                "latitude": lat,
+                "longitude": long,
+                "altitude": alt,
+                "velocity": self.velocity.magnitude()
+            }
+        with open(stateFilePath, "w") as file:
+            json.dump(stateDic, file, indent=4)
+
+    def saveState(self):
+        stateDic = {
+                "location": jsonpickle.encode(self.location),
+                "velocity": jsonpickle.encode(self.velocity),
+            }
+
+    def loadState(self):
+        if os.path.exists(satSavePath):
+            with open(satSavePath) as file:
+                state = json.load(file)
+                self.location = jsonpickle.decode(state["location"])
+                self.velocity = jsonpickle.decode(state["velocity"])
+            return True
+        else:
+            return False
+
 
 class Planet:
     """A massive body at 0,0,0 and a given radius."""
@@ -56,7 +115,7 @@ class Planet:
         """Converts theta and phi spherical coordinates to latitude and longitude. -> lat, long"""
         rotRadian = self.rotationPercentage/100 * 2 * math.pi
         lat = math.degrees(phi - (math.pi/2)) #negative lat is north, positive is south
-        long = theta - rotRadian #positive long is east, negative is west
+        long = rotRadian - theta #positive long is east, negative is west
         if long < -math.pi:
             long += math.pi*2
         elif long > math.pi:
@@ -97,6 +156,7 @@ def physicsUpdate(objects, orbitlines, deltaTime):
             accel = Point.scalarMult(Point.subtract(obj.location, obj.parentPlanet.location).normalize(),-(config()["G"] * obj.parentPlanet.mass)/(Point.subtract(obj.location, obj.parentPlanet.location).magnitude() ** 2))
             obj.velocity = Point.add(obj.velocity, Point.scalarMult(accel, deltaTime))
             obj.location = Point.add(obj.location, Point.scalarMult(obj.velocity, deltaTime))
+            obj.stationKeep()
         elif type(obj).__name__ == "Planet":
             obj.rotate(deltaTime)
     for line in orbitlines:
@@ -116,10 +176,12 @@ if __name__=="__main__":
     running = True
     display = False
     thisEarth = deepcopy(Planet.Earth)
-    sat = OrbitingBody(Point(0, config()["earthRadius"], config()["earthRadius"] - 800000), Point(-8900,0,0), "BoSLOO", 5, thisEarth)
+    sat = OrbitingBody(Point(0, config()["earthRadius"], config()["earthRadius"] - 800000), Point(-6900,0,0), "BoSLOO", 5, thisEarth)
     orbitlines = []
     renderObjects = [thisEarth, sat, orbitlines]
+    configFile = config()
     clock = pygame.time.Clock()
+    stateTimer = pygame.time.set_timer(STATE_EVENT, configFile["updateTick"]*1000)
     mapThread = threading.Thread()
 
     save = False
@@ -130,7 +192,7 @@ if __name__=="__main__":
         clock.tick(FPS)
         if display:
             #deltaTime = frameTime * config()["timeScale"]    
-            deltaTime = (clock.get_time()/1000) * config()["timeScale"]      
+            deltaTime = (clock.get_time()/1000) * configFile["timeScale"]      
             physicsUpdate(renderObjects, orbitlines, deltaTime)
             camera.renderFrame(save=save)
             save=False
@@ -142,7 +204,7 @@ if __name__=="__main__":
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if not display:
                     display = True
-                    camera = Camera(window, Point(10 * config()["earthRadius"], 0, 0), thisEarth, renderObjects)
+                    camera = Camera(window, Point(10 * configFile["earthRadius"], 0, 0), thisEarth, renderObjects)
                     camera.renderFrame()
                     pygame.display.flip()
                 else:
@@ -150,6 +212,10 @@ if __name__=="__main__":
                     if not mapThread.is_alive():
                         mapThread = threading.Thread(target=camera.saveGroundTrack())
                         mapThread.start()
+
+            elif event.type == STATE_EVENT:
+                sat.writeStateReadable()
+                configFile = config()
         
         #time.sleep(frameTime)
 

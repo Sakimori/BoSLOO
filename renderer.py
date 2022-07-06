@@ -11,6 +11,9 @@ class Point:
     def __init__(self, x, y, z):
         self.vector = numpy.array([x, y, z])
 
+    def copy(self):
+        return Point(self.vector[0], self.vector[1], self.vector[2])
+
     def polar(self):
         """Converts the vector rectangular coordinates to polar coordinates."""
         if self.vector[0] == 0:
@@ -28,7 +31,7 @@ class Point:
         return [rho, theta, phi]
 
     def magnitude(self):
-        return numpy.linalg.norm(self.vector)
+        return float(numpy.linalg.norm(self.vector))
 
     def normalize(self):
         self.vector = self.vector/self.magnitude()
@@ -209,16 +212,13 @@ class Camera:
         #pygame.draw.circle(screenSurface, (150,255,150), (int(intersectPoint.vector[1]), int(intersectPoint.vector[2])), 5)
 
         #generate text
-        rho, theta, phi = sat.location.polar()
-        if rho < self.target.radius:
-            0 == 0
 
-        rawLat, rawLong = self.target.sphericalToLatLong(theta, phi)
+        alt, rawLat, rawLong = sat.latLongAlt()
         self.updateTrackList(rawLat, rawLong)
         latString = f"Latitude: {round(rawLat,4)}⁰ S" if rawLat >= 0 else f"Latitude: {-round(rawLat,4)}⁰ N"
         longString = f"Longitude: {round(rawLong,4)}⁰ E" if rawLong >= 0 else f"Longitude: {-round(rawLong,4)}⁰ W"
         font.render_to(backSurface, (0,0), f"Speed: {round(sat.velocity.magnitude()/1000,3)} km/s", (255,255,255))
-        font.render_to(backSurface, (0,20), f"Altitude: {round((rho - self.target.radius)/1000)} km", (255,255,255))
+        font.render_to(backSurface, (0,20), f"Altitude: {round((alt)/1000)} km", (255,255,255))
         font.render_to(backSurface, (0,50), latString, (255,255,255))
         font.render_to(backSurface, (0,70), longString, (255,255,255))
 
