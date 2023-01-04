@@ -4,7 +4,6 @@ from modules.heartbeat import heartbeat_module
 from modules.location import location_module
 from modules.memory import memory_module
 from time import sleep
-from astropy.coordinates import SkyCoord as sc
 from os import system
 
 #debugg to rebuild the file every test
