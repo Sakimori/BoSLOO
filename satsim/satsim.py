@@ -14,7 +14,7 @@ DOWNLINK_FILESTORE = "../store/data"
 
 class sat:
     def __init__(self):
-        self.attitude = sc(0,0, unit='deg', frame='icrs')
+        self.attitude = "Fellin pretty good" #astropy is broke rn 
         self.battery = 100.00
         self.maneuver_TTC = 0 #time to completion
         self.gyro_saturation = 0
