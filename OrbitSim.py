@@ -176,7 +176,7 @@ if __name__=="__main__":
     running = True
     display = False
     thisEarth = deepcopy(Planet.Earth)
-    sat = OrbitingBody(Point(0, config()["earthRadius"], config()["earthRadius"] - 800000), Point(-6900,0,0), "BoSLOO", 5, thisEarth)
+    sat = OrbitingBody(Point(0, config()["earthRadius"]*5, config()["earthRadius"]*2), Point(-2500,0,0), "BoSLOO", 5, thisEarth)
     orbitlines = []
     renderObjects = [thisEarth, sat, orbitlines]
     configFile = config()
